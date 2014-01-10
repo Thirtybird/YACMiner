@@ -2037,12 +2037,12 @@ static void get_statline(char *buf, struct cgpu_info *cgpu)
 
 	sprintf(buf, "%s%d ", cgpu->drv->name, cgpu->device_id);
 	cgpu->drv->get_statline_before(buf, cgpu);
-	tailsprintf(buf, "(%ds):%s (avg):%sh/s | A:%d R:%d HW:%d U:%.1f/m",
+	tailsprintf(buf, "(%ds):%s (avg):%sh/s | A:%.0f R:%.0f HW:%d U:%.1f/m",
 		opt_log_interval,
 		displayed_rolling,
 		displayed_hashes,
-		cgpu->accepted,
-		cgpu->rejected,
+		cgpu->diff_accepted,
+		cgpu->diff_rejected,
 		cgpu->hw_errors,
 		cgpu->utility);
 	cgpu->drv->get_statline(buf, cgpu);
@@ -2102,11 +2102,17 @@ static void adj_width(int var, int *length)
 		(*length)++;
 }
 
+static void adj_fwidth(float var, int *length)
+{
+	if ((int)(log10(var) + 1) > *length)
+		(*length)++;
+}
+
 static int dev_width;
 
 static void curses_print_devstatus(struct cgpu_info *cgpu, int count)
 {
-	static int awidth = 1, rwidth = 1, hwwidth = 1, uwidth = 1;
+	static int dawidth = 1, drwidth = 1, hwwidth = 1, uwidth = 1;
 	char logline[256];
 	char displayed_hashes[16], displayed_rolling[16];
 	uint64_t dh64, dr64;
@@ -2132,7 +2138,7 @@ static void curses_print_devstatus(struct cgpu_info *cgpu, int count)
 	if (dev_runtime < 1.0)
 		dev_runtime = 1.0;
 
-	cgpu->utility = cgpu->accepted / dev_runtime * 60;
+	cgpu->utility = cgpu->diff_accepted / dev_runtime * 60;
 
 	wmove(statuswin,devcursor + count, 0);
 	wprintw(statuswin, " %s %*d: ", cgpu->drv->name, dev_width, cgpu->device_id);
@@ -2160,15 +2166,15 @@ static void curses_print_devstatus(struct cgpu_info *cgpu, int count)
 		wprintw(statuswin, "REST  ");
 	else
 		wprintw(statuswin, "%6s", displayed_rolling);
-	adj_width(cgpu->accepted, &awidth);
-	adj_width(cgpu->rejected, &rwidth);
+	adj_fwidth(cgpu->diff_accepted, &dawidth);
+	adj_fwidth(cgpu->diff_rejected, &drwidth);
 	adj_width(cgpu->hw_errors, &hwwidth);
 	adj_width(cgpu->utility, &uwidth);
 
-	wprintw(statuswin, "/%6sh/s | A:%*d R:%*d HW:%*d U:%*.2f/m",
+	wprintw(statuswin, "/%6sh/s | A:%*.0f R:%*.0f HW:%*d U:%*.2f/m",
 			displayed_hashes,
-			awidth, cgpu->accepted,
-			rwidth, cgpu->rejected,
+			dawidth, cgpu->diff_accepted,
+			drwidth, cgpu->diff_rejected,
 			hwwidth, cgpu->hw_errors,
 		uwidth + 3, cgpu->utility);
 
@@ -2452,7 +2458,7 @@ share_result(json_t *val, json_t *res, json_t *err, const struct work *work,
 		 * be stale due to networking delays.
 		 */
 		if (pool->seq_rejects > 10 && !work->stale && opt_disable_pool && enabled_pools > 1) {
-			double utility = total_accepted / total_secs * 60;
+			double utility = total_diff_accepted / total_secs * 60;
 
 			if (pool->seq_rejects > utility * 3) {
 				applog(LOG_WARNING, "Pool %d rejected %d sequential shares, disabling!",
@@ -2629,7 +2635,7 @@ static bool submit_upstream_work(struct work *work, CURL *curl, bool resubmit)
 	if (dev_runtime < 1.0)
 		dev_runtime = 1.0;
 
-	cgpu->utility = cgpu->accepted / dev_runtime * 60;
+	cgpu->utility = cgpu->diff_accepted / dev_runtime * 60;
 
 	if (!opt_realquiet)
 		print_status(thr_id);
@@ -4724,18 +4730,18 @@ static void hashmeter(int thr_id, struct timeval *diff,
 	total_secs = (double)total_diff.tv_sec +
 		((double)total_diff.tv_usec / 1000000.0);
 
-	utility = total_accepted / total_secs * 60;
+	utility = total_diff_accepted / total_secs * 60;
 
 	dh64 = (double)total_mhashes_done / total_secs * 1000000ull;
 	dr64 = (double)rolling * 1000000ull;
 	suffix_string(dh64, displayed_hashes, 4);
 	suffix_string(dr64, displayed_rolling, 4);
 
-	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%d  R:%d  HW:%d  U:%.1f/m  WU:%.1f/m",
+	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  U:%.1f/m  WU:%.1f/m  FB:%d",
 		want_per_device_stats ? "ALL " : "",
 		opt_log_interval, displayed_rolling, displayed_hashes,
-		total_accepted, total_rejected, hw_errors, utility,
-		total_diff1 / total_secs * 60);
+		total_diff_accepted, total_diff_rejected, hw_errors, utility,
+		total_diff1 / total_secs * 60, found_blocks);
 
 	local_mhashes_done = 0;
 out_unlock:
@@ -6665,7 +6671,7 @@ void print_summary(void)
 	mins = (diff.tv_sec % 3600) / 60;
 	secs = diff.tv_sec % 60;
 
-	utility = total_accepted / total_secs * 60;
+	utility = total_diff_accepted / total_secs * 60;
 	work_util = total_diff1 / total_secs * 60;
 
 	applog(LOG_WARNING, "\nSummary of runtime statistics:\n");
@@ -6690,7 +6696,7 @@ void print_summary(void)
 	if (total_accepted || total_rejected)
 		applog(LOG_WARNING, "Reject ratio: %.1f%%", (double)(total_rejected * 100) / (double)(total_accepted + total_rejected));
 	applog(LOG_WARNING, "Hardware errors: %d", hw_errors);
-	applog(LOG_WARNING, "Utility (accepted shares / min): %.2f/min", utility);
+	applog(LOG_WARNING, "Utility (accepted diff / min): %.2f/min", utility);
 	applog(LOG_WARNING, "Work Utility (diff1 shares solved / min): %.2f/min\n", work_util);
 
 	applog(LOG_WARNING, "Stale submissions discarded due to new blocks: %d", total_stale);

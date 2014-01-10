@@ -1,3 +1,9 @@
+Version 3.3.2-yac2 - 10th January 2014
+
+- Change display stats Accepted, Rejected, and Utility to display difficulty 
+ of shares submitted instead of number of shares
+- Add display value for Found Blocks (FB) in the overall status line
+
 Version 3.3.1 - 25th June 2013
 
 - Add an avalon-auto option which enables dynamic overclocking based on hardware
