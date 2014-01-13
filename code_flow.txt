@@ -1,0 +1,26 @@
+submit_nonce
+	rebuild_hash
+		call share_diff
+			(moved in 3.3.3) to share_result
+				check share diff against best share
+					update if share diff is higher
+		(moved in 3.3.3) to share_result
+			found_blocks++
+			applog "Found block for pool 0"
+	inc_hw_errors then exit (if needed)
+	submit_work_async
+		submit_work_thread
+			submit_upstream_work
+				generate hashshow string
+				call share_result
+					share_result
+						increment accepted
+						(moved in 3.3.3) from share_diff
+							check share diff against best share
+							update if share diff is higher
+						(moved in 3.3.3) from share_result
+							found_blocks++
+							applog "Found block for pool 0"
+						applog "Accepted 00000000 Diff 6/3 GPU 0" 
+
+

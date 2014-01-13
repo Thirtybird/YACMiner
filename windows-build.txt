@@ -137,9 +137,9 @@ to the next.
 
       adl.sh (optional - see below)
       autoreconf -fvi
-      CFLAGS="-O2 -msse2" ./configure (additional config options, see below)
+      CFLAGS="-O2 -msse2" ./configure --enable-scrypt
       make
-      strip cgminer.exe  <== only do this if you are not compiling for debugging
+      strip yacminer.exe  <== only do this if you are not compiling for debugging
 
 **************************************************************************************
 * Copy files to a build directory/folder                                             *

@@ -2372,6 +2372,24 @@ share_result(json_t *val, json_t *res, json_t *err, const struct work *work,
 		pool->last_share_time = cgpu->last_share_pool_time;
 		pool->last_share_diff = work->work_difficulty;
 		applog(LOG_DEBUG, "PROOF OF WORK RESULT: true (yay!!!)");
+
+		if (unlikely(work->share_diff >= current_diff)) {
+			work->pool->solved++;
+			mutex_lock(&stats_lock);
+			found_blocks++;
+			mutex_unlock(&stats_lock);
+			applog(LOG_NOTICE, "Found block for pool %d!", work->pool->pool_no);
+		}
+
+		if (unlikely(work->share_diff >= best_diff)) {
+			best_diff = work->share_diff;
+			mutex_lock(&stats_lock);
+			suffix_string(best_diff, best_share, 0);
+			mutex_unlock(&stats_lock);
+			applog(LOG_INFO, "New best share: %s", best_share);
+
+		}
+
 		if (!QUIET) {
 			if (total_pools > 1)
 				applog(LOG_NOTICE, "Accepted %s %s %d pool %d %s%s",
@@ -3307,18 +3325,22 @@ static uint64_t share_diff(const struct work *work)
 	ret = diffone / d64;
 
 	cg_wlock(&control_lock);
+	/* move checking of best share to share_result so we aren't counting invalid nonces */
+/*
 	if (unlikely(ret > best_diff)) {
 		new_best = true;
 		best_diff = ret;
 		suffix_string(best_diff, best_share, 0);
 	}
+*/
 	if (unlikely(ret > work->pool->best_diff))
 		work->pool->best_diff = ret;
 	cg_wunlock(&control_lock);
 
+/*
 	if (unlikely(new_best))
 		applog(LOG_INFO, "New best share: %s", best_share);
-
+*/
 	return ret;
 }
 
@@ -3344,10 +3366,11 @@ static void rebuild_hash(struct work *work)
 	work->share_diff = share_diff(work);
 	if (unlikely(work->share_diff >= current_diff)) {
 		work->block = true;
-		work->pool->solved++;
-		found_blocks++;
+//		Moved to ensure invalid nonces that exceed work difficulty are not counted as found blocks
+//		work->pool->solved++;
+//		found_blocks++;
 		work->mandatory = true;
-		applog(LOG_NOTICE, "Found block for pool %d!", work->pool->pool_no);
+//		applog(LOG_NOTICE, "Found block for pool %d!", work->pool->pool_no);
 	}
 }
 
