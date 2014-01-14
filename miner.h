@@ -290,6 +290,7 @@ struct gpu_adl {
 
 	int gpu;
 	bool has_fanspeed;
+	int max_fanspeed_pct;
 	struct gpu_adl *twin;
 };
 #endif

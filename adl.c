@@ -91,6 +91,7 @@ static	ADL_OVERDRIVE5_FANSPEED_SET	ADL_Overdrive5_FanSpeed_Set;
 static	ADL_OVERDRIVE5_ODPERFORMANCELEVELS_GET	ADL_Overdrive5_ODPerformanceLevels_Get;
 static	ADL_OVERDRIVE5_ODPERFORMANCELEVELS_SET	ADL_Overdrive5_ODPerformanceLevels_Set;
 static	ADL_MAIN_CONTROL_REFRESH	ADL_Main_Control_Refresh;
+static  ADL_ADAPTER_VIDEOBIOSINFO_GET  ADL_Adapter_VideoBiosInfo_Get;
 static	ADL_OVERDRIVE5_POWERCONTROL_GET	ADL_Overdrive5_PowerControl_Get;
 static	ADL_OVERDRIVE5_POWERCONTROL_SET	ADL_Overdrive5_PowerControl_Set;
 static	ADL_OVERDRIVE5_FANSPEEDTODEFAULT_SET	ADL_Overdrive5_FanSpeedToDefault_Set;
@@ -160,6 +161,7 @@ static bool prepare_adl(void)
 	ADL_Overdrive5_ODPerformanceLevels_Get = (ADL_OVERDRIVE5_ODPERFORMANCELEVELS_GET) GetProcAddress(hDLL, "ADL_Overdrive5_ODPerformanceLevels_Get");
 	ADL_Overdrive5_ODPerformanceLevels_Set = (ADL_OVERDRIVE5_ODPERFORMANCELEVELS_SET) GetProcAddress(hDLL, "ADL_Overdrive5_ODPerformanceLevels_Set");
 	ADL_Main_Control_Refresh = (ADL_MAIN_CONTROL_REFRESH) GetProcAddress(hDLL, "ADL_Main_Control_Refresh");
+	ADL_Adapter_VideoBiosInfo_Get = (ADL_ADAPTER_VIDEOBIOSINFO_GET)GetProcAddress(hDLL,"ADL_Adapter_VideoBiosInfo_Get");
 	ADL_Overdrive5_PowerControl_Get = (ADL_OVERDRIVE5_POWERCONTROL_GET) GetProcAddress(hDLL, "ADL_Overdrive5_PowerControl_Get");
 	ADL_Overdrive5_PowerControl_Set = (ADL_OVERDRIVE5_POWERCONTROL_SET) GetProcAddress(hDLL, "ADL_Overdrive5_PowerControl_Set");
 	ADL_Overdrive5_FanSpeedToDefault_Set = (ADL_OVERDRIVE5_FANSPEEDTODEFAULT_SET) GetProcAddress(hDLL, "ADL_Overdrive5_FanSpeedToDefault_Set");
@@ -172,7 +174,8 @@ static bool prepare_adl(void)
 		!ADL_Overdrive5_FanSpeed_Get || !ADL_Overdrive5_FanSpeed_Set ||
 		!ADL_Overdrive5_ODPerformanceLevels_Get || !ADL_Overdrive5_ODPerformanceLevels_Set ||
 		!ADL_Main_Control_Refresh || !ADL_Overdrive5_PowerControl_Get ||
-		!ADL_Overdrive5_PowerControl_Set || !ADL_Overdrive5_FanSpeedToDefault_Set) {
+		!ADL_Overdrive5_PowerControl_Set || !ADL_Overdrive5_FanSpeedToDefault_Set ||
+		!ADL_Adapter_VideoBiosInfo_Get) {
 			applog(LOG_WARNING, "ATI ADL's API is missing");
 		return false;
 	}
@@ -349,6 +352,7 @@ void init_adl(int nDevs)
 		int lpAdapterID;
 		ADLODPerformanceLevels *lpOdPerformanceLevels;
 		int lev, adlGpu;
+		ADLBiosInfo BiosInfo;
 
 		adlGpu = gpus[gpu].virtual_adl;
 		i = vadapters[adlGpu].id;
@@ -389,6 +393,10 @@ void init_adl(int nDevs)
 		ga->DefPerfLev = NULL;
 		ga->twin = NULL;
 
+		result = ADL_Adapter_VideoBiosInfo_Get(iAdapterIndex, &BiosInfo);
+		if (result != ADL_ERR)
+			applog(LOG_INFO, "GPU %d BIOS partno.: %s, version: %s, date: %s", gpu, BiosInfo.strPartNumber, BiosInfo.strVersion, BiosInfo.strDate);
+     
 		ga->lpOdParameters.iSize = sizeof(ADLODParameters);
 		if (ADL_Overdrive5_ODParameters_Get(iAdapterIndex, &ga->lpOdParameters) != ADL_OK)
 			applog(LOG_INFO, "Failed to ADL_Overdrive5_ODParameters_Get");
@@ -467,8 +475,10 @@ void init_adl(int nDevs)
 			applog(LOG_INFO, "Failed to ADL_Overdrive5_FanSpeedInfo_Get");
 		else
 			ga->has_fanspeed = true;
+		ga->max_fanspeed_pct = -1;
 
 		/* Save the fanspeed values as defaults in case we reset later */
+		ga->DefFanSpeedValue.iSpeedType=ADL_DL_FANCTRL_SPEED_TYPE_PERCENT;
 		ADL_Overdrive5_FanSpeed_Get(ga->iAdapterIndex, 0, &ga->DefFanSpeedValue);
 		if (gpus[gpu].gpu_fan)
 			set_fanspeed(gpu, gpus[gpu].gpu_fan);
@@ -666,6 +676,8 @@ static inline int __gpu_fanspeed(struct gpu_adl *ga)
 	ga->lpFanSpeedValue.iSpeedType = ADL_DL_FANCTRL_SPEED_TYPE_RPM;
 	if (ADL_Overdrive5_FanSpeed_Get(ga->iAdapterIndex, 0, &ga->lpFanSpeedValue) != ADL_OK)
 		return -1;
+	if (ga->lpFanSpeedValue.iFanSpeed > ga->max_fanspeed_pct)
+		ga->max_fanspeed_pct = ga->lpFanSpeedValue.iFanSpeed;
 	return ga->lpFanSpeedValue.iFanSpeed;
 }
 
@@ -709,7 +721,7 @@ int gpu_fanpercent(int gpu)
 	lock_adl();
 	ret = __gpu_fanpercent(ga);
 	unlock_adl();
-	if (unlikely(ga->has_fanspeed && ret == -1)) {
+	if (unlikely(ga->has_fanspeed && ret == -1 && ga->max_fanspeed_pct != -1)) {
 #if 0
 		/* Recursive calling applog causes a hang, so disable messages */
 		applog(LOG_WARNING, "GPU %d stopped reporting fanspeed due to driver corruption", gpu);
