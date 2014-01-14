@@ -1,7 +1,11 @@
 Version 3.3.3-yac2 - 13th January 2014
 
-- Change updating of best share found to only be updated if the nonce is proven valid
 - Found block no longer reported or incremented if the nonce is invalid
+- Replicated the following commits from Kalrtoh 
+- https://github.com/Kalroth/cgminer-3.7.2-kalroth 
+	- Added fix for fanspeed() error in adl
+	- Added BIOS information to -n listing
+	- re-set fan speed type to percent
 
 Version 3.3.2-yac2 - 10th January 2014
 
