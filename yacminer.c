@@ -2381,15 +2381,6 @@ share_result(json_t *val, json_t *res, json_t *err, const struct work *work,
 			applog(LOG_NOTICE, "Found block for pool %d!", work->pool->pool_no);
 		}
 
-		if (unlikely(work->share_diff >= best_diff)) {
-			best_diff = work->share_diff;
-			mutex_lock(&stats_lock);
-			suffix_string(best_diff, best_share, 0);
-			mutex_unlock(&stats_lock);
-			applog(LOG_INFO, "New best share: %s", best_share);
-
-		}
-
 		if (!QUIET) {
 			if (total_pools > 1)
 				applog(LOG_NOTICE, "Accepted %s %s %d pool %d %s%s",
@@ -3325,22 +3316,17 @@ static uint64_t share_diff(const struct work *work)
 	ret = diffone / d64;
 
 	cg_wlock(&control_lock);
-	/* move checking of best share to share_result so we aren't counting invalid nonces */
-/*
 	if (unlikely(ret > best_diff)) {
 		new_best = true;
 		best_diff = ret;
 		suffix_string(best_diff, best_share, 0);
 	}
-*/
 	if (unlikely(ret > work->pool->best_diff))
 		work->pool->best_diff = ret;
 	cg_wunlock(&control_lock);
 
-/*
 	if (unlikely(new_best))
 		applog(LOG_INFO, "New best share: %s", best_share);
-*/
 	return ret;
 }
 
