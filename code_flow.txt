@@ -1,9 +1,8 @@
 submit_nonce
 	rebuild_hash
 		call share_diff
-			(moved in 3.3.3) to share_result
-				check share diff against best share
-					update if share diff is higher
+			check share diff against best share
+				update if share diff is higher
 		(moved in 3.3.3) to share_result
 			found_blocks++
 			applog "Found block for pool 0"
@@ -15,9 +14,6 @@ submit_nonce
 				call share_result
 					share_result
 						increment accepted
-						(moved in 3.3.3) from share_diff
-							check share diff against best share
-							update if share diff is higher
 						(moved in 3.3.3) from share_result
 							found_blocks++
 							applog "Found block for pool 0"
