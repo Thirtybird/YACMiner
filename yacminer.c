@@ -1206,6 +1206,9 @@ static struct opt_table opt_config_table[] = {
 	OPT_WITH_ARG("--thread-concurrency",
 		     set_thread_concurrency, NULL, NULL,
 		     "Set GPU thread concurrency for scrypt mining, comma separated"),
+	OPT_WITH_ARG("--buffer-size",
+		     set_buffer_size, NULL, NULL,
+		     "Set OpenCL Buffer size in MB for scrypt mining, comma separated"),
 #endif
 	OPT_WITH_ARG("--url|-o",
 		     set_url, NULL, NULL,

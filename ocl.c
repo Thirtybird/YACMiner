@@ -798,17 +798,25 @@ built:
 
 #ifdef USE_SCRYPT
 	if (opt_scrypt) {
+
 		size_t ipt = (1024 / cgpu->lookup_gap + (1024 % cgpu->lookup_gap > 0));
 		size_t bufsize = 128 * ipt * cgpu->thread_concurrency;
 
+		if (!cgpu->buffer_size) {
+			applog(LOG_INFO, "GPU %d: setting buffer size based on thread concurrency of %d", gpu, (int)(cgpu->thread_concurrency));
+		} else {
+			applog(LOG_INFO, "GPU %d: setting buffer size based on buffer size of %d MB", gpu, (int)(cgpu->buffer_size));
+			bufsize = (cgpu->buffer_size)*(1048576);
+		}
+
 		/* Use the max alloc value which has been rounded to a power of
 		 * 2 greater >= required amount earlier */
-		if (bufsize > cgpu->max_alloc) {
+		if ((bufsize * cgpu->threads) > cgpu->max_alloc) {
 			applog(LOG_WARNING, "Maximum buffer memory device %d supports says %lu",
 						gpu, (long unsigned int)(cgpu->max_alloc));
 			applog(LOG_WARNING, "Your scrypt settings come to %d", (int)bufsize);
 		}
-		applog(LOG_DEBUG, "Creating scrypt buffer sized %d", (int)bufsize);
+		applog(LOG_INFO, "Creating scrypt buffer sized %d", (int)bufsize);
 		clState->padbufsize = bufsize;
 
 		/* This buffer is weird and might work to some degree even if

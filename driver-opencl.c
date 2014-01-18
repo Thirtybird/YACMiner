@@ -201,6 +201,37 @@ char *set_thread_concurrency(char *arg)
 
 	return NULL;
 }
+
+char *set_buffer_size(char *arg)
+{
+	int i, val = 0, device = 0;
+	char *nextptr;
+
+	applog(LOG_NOTICE, "entering set_buffer_size");
+
+	nextptr = strtok(arg, ",");
+	if (nextptr == NULL)
+		return "Invalid parameters for set buffer size";
+	val = atoi(nextptr);
+
+	gpus[device++].buffer_size = val;
+	applog(LOG_NOTICE, "Buffer Size Set GPU %d: %d",device,val);
+
+	while ((nextptr = strtok(NULL, ",")) != NULL) {
+		val = atoi(nextptr);
+
+		gpus[device++].buffer_size = val;
+		applog(LOG_DEBUG, "Buffer Size Set GPU %d: %d",device,val);
+	}
+	if (device == 1) {
+		for (i = device; i < MAX_GPUDEVICES; i++)
+			gpus[i].buffer_size = gpus[0].buffer_size;
+			applog(LOG_INFO, "Buffer Size Set GPU %d: %d",i,gpus[0].buffer_size);
+	}
+
+	return NULL;
+}
+
 #endif
 
 static enum cl_kernels select_kernel(char *arg)
