@@ -221,12 +221,10 @@ char *set_buffer_size(char *arg)
 		val = atoi(nextptr);
 
 		gpus[device++].buffer_size = val;
-		applog(LOG_DEBUG, "Buffer Size Set GPU %d: %d",device,val);
 	}
 	if (device == 1) {
 		for (i = device; i < MAX_GPUDEVICES; i++)
 			gpus[i].buffer_size = gpus[0].buffer_size;
-			applog(LOG_INFO, "Buffer Size Set GPU %d: %d",i,gpus[0].buffer_size);
 	}
 
 	return NULL;

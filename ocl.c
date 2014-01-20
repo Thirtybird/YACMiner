@@ -377,7 +377,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 	 * have otherwise created. The filename is:
 	 * name + kernelname +/- g(offset) + v + vectors + w + work_size + l + sizeof(long) + .bin
 	 * For scrypt the filename is:
-	 * name + kernelname + g + lg + lookup_gap + tc + thread_concurrency + w + work_size + l + sizeof(long) + .bin
+	 * name + kernelname + g + lg + lookup_gap + tc + thread_concurrency + bs + buffer_size + w + work_size + l + sizeof(long) + .bin
 	 */
 	char binaryfilename[255];
 	char filename[255];
@@ -530,7 +530,11 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 		strcat(binaryfilename, "g");
 	if (opt_scrypt) {
 #ifdef USE_SCRYPT
-		sprintf(numbuf, "lg%utc%u", cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency);
+		if (!cgpu->buffer_size) {
+			sprintf(numbuf, "lg%utc%ubs000", cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency);
+		} else {
+			sprintf(numbuf, "lg%utc%ubs%u", cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (unsigned int)cgpu->buffer_size);
+		}
 		strcat(binaryfilename, numbuf);
 #endif
 	} else {
@@ -803,15 +807,15 @@ built:
 		size_t bufsize = 128 * ipt * cgpu->thread_concurrency;
 
 		if (!cgpu->buffer_size) {
-			applog(LOG_INFO, "GPU %d: setting buffer size based on thread concurrency of %d", gpu, (int)(cgpu->thread_concurrency));
+			applog(LOG_NOTICE, "GPU %d: bufsize for thread @ %dMB based on TC of %d", gpu, (bufsize/1048576),(int)(cgpu->thread_concurrency));
 		} else {
-			applog(LOG_INFO, "GPU %d: setting buffer size based on buffer size of %d MB", gpu, (int)(cgpu->buffer_size));
-			bufsize = (cgpu->buffer_size)*(1048576);
+			applog(LOG_NOTICE, "GPU %d: bufsize for thread @ %dMB based on buffer-size", gpu, (int)(cgpu->buffer_size));
+			bufsize = (size_t)(cgpu->buffer_size)*(1048576);
 		}
 
 		/* Use the max alloc value which has been rounded to a power of
 		 * 2 greater >= required amount earlier */
-		if ((bufsize * cgpu->threads) > cgpu->max_alloc) {
+		if (bufsize > cgpu->max_alloc) {
 			applog(LOG_WARNING, "Maximum buffer memory device %d supports says %lu",
 						gpu, (long unsigned int)(cgpu->max_alloc));
 			applog(LOG_WARNING, "Your scrypt settings come to %d", (int)bufsize);
