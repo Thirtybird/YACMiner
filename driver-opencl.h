@@ -22,6 +22,7 @@ extern char *set_worksize(char *arg);
 extern char *set_shaders(char *arg);
 extern char *set_lookup_gap(char *arg);
 extern char *set_thread_concurrency(char *arg);
+extern char *set_buffer_size(char *arg);
 #endif
 extern char *set_kernel(char *arg);
 void manage_gpu(void);
