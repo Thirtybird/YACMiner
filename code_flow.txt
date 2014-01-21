@@ -20,3 +20,16 @@ submit_nonce
 						applog "Accepted 00000000 Diff 6/3 GPU 0" 
 
 
+
+hash_sole_work
+	*work = get_work
+	scanhash
+
+device_drv struct
+
+.thread_prepare
+	opencl_thread_prepare (takes thr_info struct)
+		initCL
+			(everything related to compiling the opencl kernel)
+.scanhash
+	opencl_scanhash
