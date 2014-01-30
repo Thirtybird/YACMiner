@@ -280,7 +280,7 @@ static struct stratum_share *stratum_shares = NULL;
 
 char *opt_socks_proxy = NULL;
 
-static const char def_conf[] = "cgminer.conf";
+static const char def_conf[] = "yacminer.conf";
 static char *default_config;
 static bool config_loaded;
 static int include_count;

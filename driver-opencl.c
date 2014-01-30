@@ -255,8 +255,6 @@ char *set_kernel(char *arg)
 	int i, device = 0;
 	char *nextptr;
 
-	if (opt_scrypt)
-		return "Cannot specify a kernel with scrypt";
 	nextptr = strtok(arg, ",");
 	if (nextptr == NULL)
 		return "Invalid parameters for set kernel";
