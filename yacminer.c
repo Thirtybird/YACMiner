@@ -1031,7 +1031,8 @@ static struct opt_table opt_config_table[] = {
 		     "Intensity of GPU scanning (d or " _MIN_INTENSITY_STR " -> " _MAX_INTENSITY_STR ", default: d to maintain desktop interactivity)"),
 	OPT_WITH_ARG("--xintensity|-X",
 			set_xintensity, NULL, NULL,
-			"Shader based intensity of GPU scanning (0 to 9999), overrides --intensity|-I."),
+			"Shader based intensity of GPU scanning (" MIN_XINTENSITY_STR " to "
+			MAX_XINTENSITY_STR "), overrides --intensity|-I."),
 	OPT_WITH_ARG("--rawintensity|-R",
 			set_rawintensity, NULL, NULL,
 			"Raw intensity of GPU scanning (" MIN_RAWINTENSITY_STR " to "
@@ -3999,9 +4000,20 @@ void write_config(FILE *fcfg)
 #ifdef HAVE_OPENCL
 	if (nDevs) {
 		/* Write GPU device values */
-		fputs(",\n\"intensity\" : \"", fcfg);
-		for(i = 0; i < nDevs; i++)
-			fprintf(fcfg, gpus[i].dynamic ? "%sd" : "%s%d", i > 0 ? "," : "", gpus[i].intensity);
+		if ((nDevs > 0) && (gpus[0].intensity > 0)) {
+			fputs(",\n\"intensity\" : \"", fcfg);
+			for(i = 0; i < nDevs; i++)
+				fprintf(fcfg, gpus[i].dynamic ? "%sd" : "%s%d", i > 0 ? "," : "", gpus[i].intensity);
+		} else if ((nDevs > 0) && (gpus[0].xintensity > 0)) {
+			fputs(",\n\"xintensity\" : \"", fcfg);
+			for(i = 0; i < nDevs; i++)
+				fprintf(fcfg, "%s%d", i > 0 ? "," : "", gpus[i].xintensity);
+		} else if ((nDevs > 0) && (gpus[0].rawintensity > 0)) {
+			fputs(",\n\"rawintensity\" : \"", fcfg);
+			for(i = 0; i < nDevs; i++)
+				fprintf(fcfg, "%s%d", i > 0 ? "," : "", gpus[i].rawintensity);
+		};
+
 		fputs("\",\n\"vectors\" : \"", fcfg);
 		for(i = 0; i < nDevs; i++)
 			fprintf(fcfg, "%s%d", i > 0 ? "," : "",

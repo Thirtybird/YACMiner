@@ -627,7 +627,7 @@ char *set_xintensity(char *arg)
   if (nextptr == NULL)
     return "Invalid parameters for shader based intensity";
   val = atoi(nextptr);
-  if (val < 1 || val > 9999)
+  if (val < MIN_XINTENSITY || val > MAX_XINTENSITY)
     return "Invalid value passed to set shader intensity";
 
   gpus[device].dynamic = false; // Disable dynamic intensity
@@ -638,7 +638,7 @@ char *set_xintensity(char *arg)
 
   while ((nextptr = strtok(NULL, ",")) != NULL) {
     val = atoi(nextptr);
-    if (val < 1 || val > 9999)
+    if (val < MIN_XINTENSITY || val > MAX_XINTENSITY)
       return "Invalid value passed to set shader based intensity";
     gpus[device].dynamic = false; // Disable dynamic intensity
     gpus[device].intensity = 0; // Disable regular intensity
@@ -1326,9 +1326,9 @@ static void set_threads_hashes(unsigned int vectors, unsigned int compute_shader
 		if (*rawintensity > 0) {
 			threads = *rawintensity;
 		} else if (*xintensity > 0) {
-			threads = compute_shaders * (opt_scrypt ? *xintensity : (1 << (4 + *xintensity)));
+			threads = compute_shaders * *xintensity;
 		} else {
-			threads = 1 << ((opt_scrypt ? 0 : 15) + *intensity);
+			threads = 1 << *intensity;
 		}
 		if (threads < minthreads) {
 			if (likely(*intensity < MAX_INTENSITY))
