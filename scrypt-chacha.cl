@@ -197,7 +197,7 @@ scrypt_hash_update_128(scrypt_hash_state *S, const uint4 *in4) {
 		
 		#pragma unroll
 		for (i = 0; i < 3; i++) {
-			S->buffer4[i] = (uint4)(int2[2 * i].xy, int2[2 * i + 1].xy);
+			S->buffer4[i] = (uint4)(int2[i<<1].xy, int2[(i<<1) + 1].xy);
 		}
 		S->buffer4[3].xy = int2[6].xy;
 	}
