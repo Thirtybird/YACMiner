@@ -1029,6 +1029,13 @@ static struct opt_table opt_config_table[] = {
 	OPT_WITH_ARG("--intensity|-I",
 		     set_intensity, NULL, NULL,
 		     "Intensity of GPU scanning (d or " _MIN_INTENSITY_STR " -> " _MAX_INTENSITY_STR ", default: d to maintain desktop interactivity)"),
+	OPT_WITH_ARG("--xintensity|-X",
+			set_xintensity, NULL, NULL,
+			"Shader based intensity of GPU scanning (0 to 9999), overrides --intensity|-I."),
+	OPT_WITH_ARG("--rawintensity|-R",
+			set_rawintensity, NULL, NULL,
+			"Raw intensity of GPU scanning (" MIN_RAWINTENSITY_STR " to "
+			MAX_RAWINTENSITY_STR "), overrides --intensity|-I and --xintensity|-X."),
 #endif
 	OPT_WITH_ARG("--hotplug",
 		     set_int_0_to_9999, NULL, &hotplug_time,
