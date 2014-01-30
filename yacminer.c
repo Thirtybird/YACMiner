@@ -4531,7 +4531,7 @@ static void set_options(void)
 	clear_logwin();
 retry:
 	wlogprint("[Q]ueue: %d\n[S]cantime: %d\n[E]xpiry: %d\n"
-		  "[W]rite config file\n[C]gminer restart\n",
+		  "[W]rite config file\n[R]estart\n",
 		opt_queue, opt_scantime, opt_expiry);
 	wlogprint("Select an option or any other key to return\n");
 	logwin_update();
@@ -4591,7 +4591,7 @@ retry:
 		fclose(fcfg);
 		goto retry;
 
-	} else if (!strncasecmp(&input, "c", 1)) {
+	} else if (!strncasecmp(&input, "r", 1)) {
 		wlogprint("Are you sure?\n");
 		input = getch();
 		if (!strncasecmp(&input, "y", 1))
@@ -7514,7 +7514,7 @@ int main(int argc, char *argv[])
 			case -1:
 				applog(LOG_WARNING, "Error in configuration file, partially loaded.");
 				if (use_curses)
-					applog(LOG_WARNING, "Start cgminer with -T to see what failed to load.");
+					applog(LOG_WARNING, "Start yacminer with -T to see what failed to load.");
 				break;
 			default:
 				break;
@@ -7749,7 +7749,7 @@ int main(int argc, char *argv[])
 #ifdef HAVE_CURSES
 			if (use_curses) {
 				halfdelay(150);
-				applog(LOG_ERR, "Press any key to exit, or cgminer will try again in 15s.");
+				applog(LOG_ERR, "Press any key to exit, or yacminer will try again in 15s.");
 				if (getch() != ERR)
 					quit(0, "No servers could be used! Exiting.");
 				cbreak();
