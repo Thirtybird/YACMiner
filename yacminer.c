@@ -4065,7 +4065,7 @@ void write_config(FILE *fcfg)
 			fprintf(fcfg, "%s%d-%d", i > 0 ? "," : "", gpus[i].min_engine, gpus[i].gpu_engine);
 		fputs("\",\n\"gpu-fan\" : \"", fcfg);
 		for(i = 0; i < nDevs; i++)
-			fprintf(fcfg, "%s%d-%d", i > 0 ? "," : "", gpus[i].min_fan, gpus[i].gpu_fan);
+			fprintf(fcfg, "%s%d-%d", i > 0 ? "," : "", gpus[i].min_fan, (gpus[i].gpu_fan != GPU_FAN_NOMINAL_MAX ? gpus[i].gpu_fan : 0));
 		fputs("\",\n\"gpu-memclock\" : \"", fcfg);
 		for(i = 0; i < nDevs; i++)
 			fprintf(fcfg, "%s%d", i > 0 ? "," : "", gpus[i].gpu_memclock);

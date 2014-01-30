@@ -32,6 +32,7 @@
 #include <tchar.h>
 #endif
 #include "adl_functions.h"
+#include "adl.h"
 
 #ifndef HAVE_CURSES
 #define wlogprint(...)  applog(LOG_WARNING, __VA_ARGS__)
@@ -483,7 +484,7 @@ void init_adl(int nDevs)
 		if (gpus[gpu].gpu_fan)
 			set_fanspeed(gpu, gpus[gpu].gpu_fan);
 		else
-			gpus[gpu].gpu_fan = 85; /* Set a nominal upper limit of 85% */
+			gpus[gpu].gpu_fan = GPU_FAN_NOMINAL_MAX; /* Set a nominal upper limit of 85% */
 
 		/* Not fatal if powercontrol get fails */
 		if (ADL_Overdrive5_PowerControl_Get(ga->iAdapterIndex, &ga->iPercentage, &dummy) != ADL_OK)

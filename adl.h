@@ -1,6 +1,9 @@
 #ifndef __ADL_H__
 #define __ADL_H__
 #ifdef HAVE_ADL
+
+#define GPU_FAN_NOMINAL_MAX 85
+
 bool adl_active;
 bool opt_reorder;
 int opt_hysteresis;
