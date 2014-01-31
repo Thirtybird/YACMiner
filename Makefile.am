@@ -53,10 +53,7 @@ yacminer_SOURCES += driver-opencl.h driver-opencl.c
 yacminer_SOURCES += ocl.c ocl.h findnonce.c findnonce.h
 yacminer_SOURCES += adl.c adl.h adl_functions.h
 yacminer_SOURCES += *.cl
-
-if HAS_SCRYPT
 yacminer_SOURCES += scrypt.c scrypt.h
-endif
 
 if NEED_FPGAUTILS
 yacminer_SOURCES += fpgautils.c fpgautils.h

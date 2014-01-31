@@ -7,5 +7,5 @@ autoreconf -fi "${bs_dir}"
 
 if test -z "$NOCONFIGURE" ; then
 	echo 'Configuring...'
-	"$bs_dir"/configure "$@" --enable-scrypt
+	"$bs_dir"/configure "$@"
 fi
