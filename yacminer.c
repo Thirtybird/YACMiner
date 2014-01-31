@@ -3677,6 +3677,7 @@ static void set_blockdiff(const struct work *work)
 	uint32_t diffvalue;
 	char rhash[32];
 	int diffshift;
+	char cprev_diff[8];
 
 	difficulty = swab32(*((uint32_t *)(work->data + 72)));
 
@@ -3710,7 +3711,8 @@ static void set_blockdiff(const struct work *work)
 	diff64 = diffone / d64;
 	suffix_string(diff64, block_diff, 0);
 	current_diff = (double)diffone / (double)d64;
-	if (unlikely(current_diff != previous_diff))
+	suffix_string (previous_diff, cprev_diff, 0);
+	if (unlikely(strcmp(block_diff,cprev_diff) != 0))
 		applog(LOG_NOTICE, "Network diff set to %s", block_diff);
 }
 
