@@ -502,11 +502,9 @@ struct cgpu_info {
 	enum cl_kernels kernel;
 	cl_ulong max_alloc;
 
-#ifdef USE_SCRYPT
 	int opt_lg, lookup_gap;
 	size_t opt_tc, thread_concurrency, buffer_size;
 	size_t shaders;
-#endif
 	struct timeval tv_gpustart;
 	int intervals;
 #endif
@@ -974,11 +972,7 @@ extern struct thr_info *control_thr;
 extern struct thr_info **mining_thr;
 extern struct cgpu_info gpus[MAX_GPUDEVICES];
 extern int gpu_threads;
-#ifdef USE_SCRYPT
 extern bool opt_scrypt;
-#else
-#define opt_scrypt (0)
-#endif
 extern double total_secs;
 extern int mining_threads;
 extern int total_devices;
@@ -1029,9 +1023,7 @@ typedef struct {
 	cl_uint B1addK6, PreVal0addK7, W16addK16, W17addK17;
 	cl_uint zeroA, zeroB;
 	cl_uint oneA, twoA, threeA, fourA, fiveA, sixA, sevenA;
-#ifdef USE_SCRYPT
 	struct work *work;
-#endif
 } dev_blk_ctx;
 #else
 typedef struct {
@@ -1196,9 +1188,7 @@ struct work {
 	unsigned char	target[32];
 	unsigned char	hash[32];
 
-#ifdef USE_SCRYPT
 	unsigned char	device_target[32];
-#endif
 	double		device_diff;
 	uint64_t	share_diff;
 

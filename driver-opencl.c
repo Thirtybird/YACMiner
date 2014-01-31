@@ -126,7 +126,6 @@ char *set_worksize(char *arg)
 	return NULL;
 }
 
-#ifdef USE_SCRYPT
 char *set_shaders(char *arg)
 {
 	int i, val = 0, device = 0;
@@ -230,8 +229,6 @@ char *set_buffer_size(char *arg)
 	return NULL;
 }
 
-#endif
-
 static enum cl_kernels select_kernel(char *arg)
 {
 	if (!strcmp(arg, "diablo"))
@@ -242,10 +239,8 @@ static enum cl_kernels select_kernel(char *arg)
 		return KL_POCLBM;
 	if (!strcmp(arg, "phatk"))
 		return KL_PHATK;
-#ifdef USE_SCRYPT
 	if (!strcmp(arg, "scrypt"))
 		return KL_SCRYPT;
-#endif
 	return KL_NONE;
 }
 
@@ -1232,7 +1227,6 @@ static cl_int queue_diablo_kernel(_clState *clState, dev_blk_ctx *blk, cl_uint t
 	return status;
 }
 
-#ifdef USE_SCRYPT
 // yacoin: increasing Nfactor gradually
 const unsigned char minNfactor = 4;
 const unsigned char maxNfactor = 30;
@@ -1310,7 +1304,6 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 
 	return status;
 }
-#endif
 
 // This is where the number of threads for the GPU gets set - originally 2^I
 //static void set_threads_hashes(unsigned int vectors,int64_t *hashes, size_t *globalThreads,
@@ -1608,11 +1601,9 @@ static bool opencl_thread_prepare(struct thr_info *thr)
 			case KL_PHATK:
 				cgpu->kname = "phatk";
 				break;
-#ifdef USE_SCRYPT
 			case KL_SCRYPT:
 				cgpu->kname = "scrypt";
 				break;
-#endif
 			case KL_POCLBM:
 				cgpu->kname = "poclbm";
 				break;
@@ -1655,11 +1646,9 @@ static bool opencl_thread_init(struct thr_info *thr)
 		case KL_DIAKGCN:
 			thrdata->queue_kernel_parameters = &queue_diakgcn_kernel;
 			break;
-#ifdef USE_SCRYPT
 		case KL_SCRYPT:
 			thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
 			break;
-#endif
 		default:
 		case KL_DIABLO:
 			thrdata->queue_kernel_parameters = &queue_diablo_kernel;
@@ -1691,12 +1680,7 @@ static bool opencl_thread_init(struct thr_info *thr)
 
 static bool opencl_prepare_work(struct thr_info __maybe_unused *thr, struct work *work)
 {
-#ifdef USE_SCRYPT
-	if (opt_scrypt)
-		work->blk.work = work;
-	else
-#endif
-		precalc_hash(&work->blk, (uint32_t *)(work->midstate), (uint32_t *)(work->data + 64));
+	work->blk.work = work;
 	return true;
 }
 

@@ -159,9 +159,7 @@ static const char *NULLSTR = "(null)";
 static const char *TRUESTR = "true";
 static const char *FALSESTR = "false";
 
-#ifdef USE_SCRYPT
 static const char *SCRYPTSTR = "scrypt";
-#endif
 static const char *SHA256STR = "sha256";
 
 static const char *DEVICECODE = ""
@@ -3115,12 +3113,7 @@ static void minecoin(struct io_data *io_data, __maybe_unused SOCKETTYPE c, __may
 	message(io_data, MSG_MINECOIN, 0, NULL, isjson);
 	io_open = io_add(io_data, isjson ? COMSTR JSON_MINECOIN : _MINECOIN COMSTR);
 
-#ifdef USE_SCRYPT
-	if (opt_scrypt)
-		root = api_add_const(root, "Hash Method", SCRYPTSTR, false);
-	else
-#endif
-		root = api_add_const(root, "Hash Method", SHA256STR, false);
+	root = api_add_const(root, "Hash Method", SCRYPTSTR, false);
 
 	cg_rlock(&ch_lock);
 	if (current_fullhash && *current_fullhash) {
