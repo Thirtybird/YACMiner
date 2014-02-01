@@ -102,7 +102,9 @@ int nDevs;
 int opt_dynamic_interval = 7;
 int opt_g_threads = -1;
 int gpu_threads;
-bool opt_scrypt = true;
+#ifdef USE_SCRYPT
+bool opt_scrypt;
+#endif
 #endif
 bool opt_restart = true;
 static bool opt_nogpu;
@@ -1019,9 +1021,11 @@ static struct opt_table opt_config_table[] = {
 		     set_gpu_vddc, NULL, NULL,
 		     "Set the GPU voltage in Volts - one value for all or separate by commas for per card"),
 #endif
+#ifdef USE_SCRYPT
 	OPT_WITH_ARG("--lookup-gap",
 		     set_lookup_gap, NULL, NULL,
 		     "Set GPU lookup gap for scrypt mining, comma separated"),
+#endif
 	OPT_WITH_ARG("--intensity|-I",
 		     set_intensity, NULL, NULL,
 		     "Intensity of GPU scanning (d or " _MIN_INTENSITY_STR " -> " _MAX_INTENSITY_STR ", default: d to maintain desktop interactivity)"),
@@ -1160,12 +1164,14 @@ static struct opt_table opt_config_table[] = {
 	OPT_WITH_ARG("--sched-stop",
 		     set_schedtime, NULL, &schedstop,
 		     "Set a time of day in HH:MM to stop mining (will quit without a start time)"),
+#ifdef USE_SCRYPT
 	OPT_WITHOUT_ARG("--scrypt",
 			opt_set_bool, &opt_scrypt,
 			"Use the scrypt algorithm for mining (litecoin only)"),
 	OPT_WITH_ARG("--shaders",
 		     set_shaders, NULL, NULL,
 		     "GPU shaders per card for tuning scrypt, comma separated"),
+#endif
 	OPT_WITH_ARG("--sharelog",
 		     set_sharelog, NULL, NULL,
 		     "Append share log to file"),
@@ -1204,12 +1210,14 @@ static struct opt_table opt_config_table[] = {
 			opt_hidden
 #endif
 	),
+#ifdef USE_SCRYPT
 	OPT_WITH_ARG("--thread-concurrency",
 		     set_thread_concurrency, NULL, NULL,
 		     "Set GPU thread concurrency for scrypt mining, comma separated"),
 	OPT_WITH_ARG("--buffer-size",
 		     set_buffer_size, NULL, NULL,
 		     "Set OpenCL Buffer size in MB for scrypt mining, comma separated"),
+#endif
 	OPT_WITH_ARG("--url|-o",
 		     set_url, NULL, NULL,
 		     "URL for bitcoin JSON-RPC server"),
@@ -1408,7 +1416,9 @@ static char *opt_verusage_and_exit(const char *extra)
 #ifdef USE_ZTEX
 		"ztex "
 #endif
+#ifdef USE_SCRYPT
 		"scrypt "
+#endif
 		"mining support.\n"
 		, packagename);
 	printf("%s", opt_usage(opt_argv0, extra));
@@ -4037,6 +4047,7 @@ void write_config(FILE *fcfg)
 					break;
 			}
 		}
+#ifdef USE_SCRYPT
 		fputs("\",\n\"lookup-gap\" : \"", fcfg);
 		for(i = 0; i < nDevs; i++)
 			fprintf(fcfg, "%s%d", i > 0 ? "," : "",
@@ -4049,6 +4060,7 @@ void write_config(FILE *fcfg)
 		for(i = 0; i < nDevs; i++)
 			fprintf(fcfg, "%s%d", i > 0 ? "," : "",
 				(int)gpus[i].shaders);
+#endif
 #ifdef HAVE_ADL
 		fputs("\",\n\"gpu-engine\" : \"", fcfg);
 		for(i = 0; i < nDevs; i++)
@@ -5841,21 +5853,25 @@ static void hash_sole_work(struct thr_info *mythr)
 			break;
 		}
 		work->device_diff = MIN(drv->working_diff, work->work_difficulty);
+#ifdef USE_SCRYPT
 		/* Dynamically adjust the working diff even if the target
 		 * diff is very high to ensure we can still validate scrypt is
 		 * returning shares. */
-		double wu;
+		if (opt_scrypt) {
+			double wu;
 
-		wu = total_diff1 / total_secs * 60;
-		if (wu > 30 && drv->working_diff < drv->max_diff &&
-			drv->working_diff < work->work_difficulty) {
-			drv->working_diff++;
-			applog(LOG_DEBUG, "Driver %s working diff changed to %.0f",
-				drv->dname, drv->working_diff);
-			work->device_diff = MIN(drv->working_diff, work->work_difficulty);
-		} else if (drv->working_diff > work->work_difficulty)
-			drv->working_diff = work->work_difficulty;
-		set_target(work->device_target, work->device_diff);
+			wu = total_diff1 / total_secs * 60;
+			if (wu > 30 && drv->working_diff < drv->max_diff &&
+			    drv->working_diff < work->work_difficulty) {
+				drv->working_diff++;
+				applog(LOG_DEBUG, "Driver %s working diff changed to %.0f",
+					drv->dname, drv->working_diff);
+				work->device_diff = MIN(drv->working_diff, work->work_difficulty);
+			} else if (drv->working_diff > work->work_difficulty)
+				drv->working_diff = work->work_difficulty;
+			set_target(work->device_target, work->device_diff);
+		}
+#endif
 
 		do {
 			cgtime(&tv_start);

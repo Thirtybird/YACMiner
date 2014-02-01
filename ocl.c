@@ -488,24 +488,29 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 		clState->wsize = (clState->max_work_size <= 256 ? clState->max_work_size : 256) / clState->vwidth;
 	cgpu->work_size = clState->wsize;
 
-	if (!cgpu->opt_lg) {
-		applog(LOG_DEBUG, "GPU %d: selecting lookup gap of 2", gpu);
-		cgpu->lookup_gap = 2;
-	} else
-		cgpu->lookup_gap = cgpu->opt_lg;
+#ifdef USE_SCRYPT
+	if (opt_scrypt) {
+		if (!cgpu->opt_lg) {
+			applog(LOG_DEBUG, "GPU %d: selecting lookup gap of 2", gpu);
+			cgpu->lookup_gap = 2;
+		} else
+			cgpu->lookup_gap = cgpu->opt_lg;
 
-	if (!cgpu->opt_tc) {
-		unsigned int sixtyfours;
+		if (!cgpu->opt_tc) {
+			unsigned int sixtyfours;
 
-		sixtyfours =  cgpu->max_alloc / 131072 / 64 - 1;
-		cgpu->thread_concurrency = sixtyfours * 64;
-		if (cgpu->shaders && cgpu->thread_concurrency > cgpu->shaders) {
-			cgpu->thread_concurrency -= cgpu->thread_concurrency % cgpu->shaders;
-			if (cgpu->thread_concurrency > cgpu->shaders * 5)
-				cgpu->thread_concurrency = cgpu->shaders * 5;
-		}
-		applog(LOG_DEBUG, "GPU %d: selecting thread concurrency of %d", gpu, (int)(cgpu->thread_concurrency));
+			sixtyfours =  cgpu->max_alloc / 131072 / 64 - 1;
+			cgpu->thread_concurrency = sixtyfours * 64;
+			if (cgpu->shaders && cgpu->thread_concurrency > cgpu->shaders) {
+				cgpu->thread_concurrency -= cgpu->thread_concurrency % cgpu->shaders;
+				if (cgpu->thread_concurrency > cgpu->shaders * 5)
+					cgpu->thread_concurrency = cgpu->shaders * 5;
+			}
+			applog(LOG_DEBUG, "GPU %d: selecting thread concurrency of %d", gpu, (int)(cgpu->thread_concurrency));
+		} else
+			cgpu->thread_concurrency = cgpu->opt_tc;
 	}
+#endif
 
 	FILE *binaryfile;
 	size_t *binary_sizes;
@@ -534,12 +539,19 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 	strcat(binaryfilename, name);
 	if (clState->goffset)
 		strcat(binaryfilename, "g");
-	if (!cgpu->buffer_size) {
-		sprintf(numbuf, "lg%utc%ubs000", cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency);
+	if (opt_scrypt) {
+#ifdef USE_SCRYPT
+		if (!cgpu->buffer_size) {
+			sprintf(numbuf, "lg%utc%ubs000", cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency);
+		} else {
+			sprintf(numbuf, "lg%utc%ubs%u", cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (unsigned int)cgpu->buffer_size);
+		}
+		strcat(binaryfilename, numbuf);
+#endif
 	} else {
-		sprintf(numbuf, "lg%utc%ubs%u", cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (unsigned int)cgpu->buffer_size);
+		sprintf(numbuf, "v%d", clState->vwidth);
+		strcat(binaryfilename, numbuf);
 	}
-	strcat(binaryfilename, numbuf);
 	sprintf(numbuf, "w%d", (int)clState->wsize);
 	strcat(binaryfilename, numbuf);
 	sprintf(numbuf, "l%d", (int)sizeof(long));
@@ -603,8 +615,16 @@ build:
 	/* create a cl program executable for all the devices specified */
 	char *CompilerOptions = calloc(1, 256);
 
-	sprintf(CompilerOptions, "-D LOOKUP_GAP=%d -D CONCURRENT_THREADS=%d -D WORKSIZE=%d", cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)clState->wsize);
-
+#ifdef USE_SCRYPT
+	if (opt_scrypt)
+		sprintf(CompilerOptions, "-D LOOKUP_GAP=%d -D CONCURRENT_THREADS=%d -D WORKSIZE=%d",
+			cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)clState->wsize);
+	else
+#endif
+	{
+		sprintf(CompilerOptions, "-D WORKSIZE=%d -D VECTORS%d -D WORKVEC=%d",
+			(int)clState->wsize, clState->vwidth, (int)clState->wsize * clState->vwidth);
+	}
 	applog(LOG_DEBUG, "Setting worksize to %d", (int)(clState->wsize));
 	if (clState->vwidth > 1)
 		applog(LOG_DEBUG, "Patched source to suit %d vectors", clState->vwidth);
@@ -791,43 +811,48 @@ built:
 		return NULL;
 	}
 
-	size_t ipt = (1024 / cgpu->lookup_gap + (1024 % cgpu->lookup_gap > 0));
-	size_t bufsize = 128 * ipt * cgpu->thread_concurrency;
+#ifdef USE_SCRYPT
+	if (opt_scrypt) {
 
-	if (!cgpu->buffer_size) {
-		applog(LOG_NOTICE, "GPU %d: bufsize for thread @ %dMB based on TC of %d", gpu, (bufsize/1048576),(int)(cgpu->thread_concurrency));
-	} else {
-		applog(LOG_NOTICE, "GPU %d: bufsize for thread @ %dMB based on buffer-size", gpu, (int)(cgpu->buffer_size));
-		bufsize = (size_t)(cgpu->buffer_size)*(1048576);
-	}
+		size_t ipt = (1024 / cgpu->lookup_gap + (1024 % cgpu->lookup_gap > 0));
+		size_t bufsize = 128 * ipt * cgpu->thread_concurrency;
 
-	/* Use the max alloc value which has been rounded to a power of
-	 * 2 greater >= required amount earlier */
-	if (bufsize > cgpu->max_alloc) {
-		applog(LOG_WARNING, "Maximum buffer memory device %d supports says %lu",
-					gpu, (long unsigned int)(cgpu->max_alloc));
-		applog(LOG_WARNING, "Your scrypt settings come to %d", (int)bufsize);
-	}
-	applog(LOG_INFO, "Creating scrypt buffer sized %d", (int)bufsize);
-	clState->padbufsize = bufsize;
+		if (!cgpu->buffer_size) {
+			applog(LOG_NOTICE, "GPU %d: bufsize for thread @ %dMB based on TC of %d", gpu, (bufsize/1048576),(int)(cgpu->thread_concurrency));
+		} else {
+			applog(LOG_NOTICE, "GPU %d: bufsize for thread @ %dMB based on buffer-size", gpu, (int)(cgpu->buffer_size));
+			bufsize = (size_t)(cgpu->buffer_size)*(1048576);
+		}
 
-	/* This buffer is weird and might work to some degree even if
-	 * the create buffer call has apparently failed, so check if we
-	 * get anything back before we call it a failure. */
-	clState->padbuffer8 = NULL;
-	clState->padbuffer8 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, bufsize, NULL, &status);
-	if (status != CL_SUCCESS && !clState->padbuffer8) {
-		applog(LOG_ERR, "Error %d: clCreateBuffer (padbuffer8), decrease TC or increase LG", status);
-		return NULL;
-	}
+		/* Use the max alloc value which has been rounded to a power of
+		 * 2 greater >= required amount earlier */
+		if (bufsize > cgpu->max_alloc) {
+			applog(LOG_WARNING, "Maximum buffer memory device %d supports says %lu",
+						gpu, (long unsigned int)(cgpu->max_alloc));
+			applog(LOG_WARNING, "Your scrypt settings come to %d", (int)bufsize);
+		}
+		applog(LOG_INFO, "Creating scrypt buffer sized %d", (int)bufsize);
+		clState->padbufsize = bufsize;
 
-	clState->CLbuffer0 = clCreateBuffer(clState->context, CL_MEM_READ_ONLY, 128, NULL, &status);
-	if (status != CL_SUCCESS) {
-		applog(LOG_ERR, "Error %d: clCreateBuffer (CLbuffer0)", status);
-		return NULL;
-	}
-	clState->outputBuffer = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, SCRYPT_BUFFERSIZE, NULL, &status);
+		/* This buffer is weird and might work to some degree even if
+		 * the create buffer call has apparently failed, so check if we
+		 * get anything back before we call it a failure. */
+		clState->padbuffer8 = NULL;
+		clState->padbuffer8 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, bufsize, NULL, &status);
+		if (status != CL_SUCCESS && !clState->padbuffer8) {
+			applog(LOG_ERR, "Error %d: clCreateBuffer (padbuffer8), decrease TC or increase LG", status);
+			return NULL;
+		}
 
+		clState->CLbuffer0 = clCreateBuffer(clState->context, CL_MEM_READ_ONLY, 128, NULL, &status);
+		if (status != CL_SUCCESS) {
+			applog(LOG_ERR, "Error %d: clCreateBuffer (CLbuffer0)", status);
+			return NULL;
+		}
+		clState->outputBuffer = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, SCRYPT_BUFFERSIZE, NULL, &status);
+	} else
+#endif
+	clState->outputBuffer = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, BUFFERSIZE, NULL, &status);
 	if (status != CL_SUCCESS) {
 		applog(LOG_ERR, "Error %d: clCreateBuffer (outputBuffer)", status);
 		return NULL;
