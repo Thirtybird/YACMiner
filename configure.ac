@@ -183,7 +183,7 @@ AC_ARG_ENABLE([adl],
 	[adl=$enableval]
 	)
 
-scrypt="yes"
+scrypt="no"
 
 if test "$found_opencl" = 1; then
 	if test "x$adl" != xno; then
