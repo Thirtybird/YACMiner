@@ -32,7 +32,6 @@
 #include <tchar.h>
 #endif
 #include "adl_functions.h"
-#include "adl.h"
 
 #ifndef HAVE_CURSES
 #define wlogprint(...)  applog(LOG_WARNING, __VA_ARGS__)
@@ -64,7 +63,7 @@ static void * __stdcall ADL_Main_Memory_Alloc(int iSize)
 // Optional Memory de-allocation function
 static void __stdcall ADL_Main_Memory_Free (void **lpBuffer)
 {
-	if (*lpBuffer) {
+	if (*lpBuffer != NULL) {
 		free (*lpBuffer);
 		*lpBuffer = NULL;
 	}
@@ -78,24 +77,42 @@ static void *GetProcAddress(void *pLibrary, const char *name)
 }
 #endif
 
-static	ADL_MAIN_CONTROL_CREATE		ADL_Main_Control_Create;
-static	ADL_MAIN_CONTROL_DESTROY	ADL_Main_Control_Destroy;
+static	ADL_MAIN_CONTROL_CREATE			ADL_Main_Control_Create;
+static	ADL_MAIN_CONTROL_DESTROY		ADL_Main_Control_Destroy;
 static	ADL_ADAPTER_NUMBEROFADAPTERS_GET	ADL_Adapter_NumberOfAdapters_Get;
-static	ADL_ADAPTER_ADAPTERINFO_GET	ADL_Adapter_AdapterInfo_Get;
-static	ADL_ADAPTER_ID_GET		ADL_Adapter_ID_Get;
-static	ADL_OVERDRIVE5_TEMPERATURE_GET	ADL_Overdrive5_Temperature_Get;
+static	ADL_ADAPTER_ADAPTERINFO_GET		ADL_Adapter_AdapterInfo_Get;
+static	ADL_ADAPTER_ID_GET			ADL_Adapter_ID_Get;
+static	ADL_MAIN_CONTROL_REFRESH		ADL_Main_Control_Refresh;
+static	ADL_ADAPTER_VIDEOBIOSINFO_GET		ADL_Adapter_VideoBiosInfo_Get;
+static	ADL_DISPLAY_DISPLAYINFO_GET		ADL_Display_DisplayInfo_Get;
+static	ADL_ADAPTER_ACCESSIBILITY_GET		ADL_Adapter_Accessibility_Get;
+
+static	ADL_OVERDRIVE_CAPS			ADL_Overdrive_Caps;
+
+static	ADL_OVERDRIVE5_TEMPERATURE_GET		ADL_Overdrive5_Temperature_Get;
 static	ADL_OVERDRIVE5_CURRENTACTIVITY_GET	ADL_Overdrive5_CurrentActivity_Get;
-static	ADL_OVERDRIVE5_ODPARAMETERS_GET	ADL_Overdrive5_ODParameters_Get;
-static	ADL_OVERDRIVE5_FANSPEEDINFO_GET	ADL_Overdrive5_FanSpeedInfo_Get;
-static	ADL_OVERDRIVE5_FANSPEED_GET	ADL_Overdrive5_FanSpeed_Get;
-static	ADL_OVERDRIVE5_FANSPEED_SET	ADL_Overdrive5_FanSpeed_Set;
+static	ADL_OVERDRIVE5_ODPARAMETERS_GET		ADL_Overdrive5_ODParameters_Get;
+static	ADL_OVERDRIVE5_FANSPEEDINFO_GET		ADL_Overdrive5_FanSpeedInfo_Get;
+static	ADL_OVERDRIVE5_FANSPEED_GET		ADL_Overdrive5_FanSpeed_Get;
+static	ADL_OVERDRIVE5_FANSPEED_SET		ADL_Overdrive5_FanSpeed_Set;
 static	ADL_OVERDRIVE5_ODPERFORMANCELEVELS_GET	ADL_Overdrive5_ODPerformanceLevels_Get;
 static	ADL_OVERDRIVE5_ODPERFORMANCELEVELS_SET	ADL_Overdrive5_ODPerformanceLevels_Set;
-static	ADL_MAIN_CONTROL_REFRESH	ADL_Main_Control_Refresh;
-static  ADL_ADAPTER_VIDEOBIOSINFO_GET  ADL_Adapter_VideoBiosInfo_Get;
-static	ADL_OVERDRIVE5_POWERCONTROL_GET	ADL_Overdrive5_PowerControl_Get;
-static	ADL_OVERDRIVE5_POWERCONTROL_SET	ADL_Overdrive5_PowerControl_Set;
+static	ADL_OVERDRIVE5_POWERCONTROL_GET		ADL_Overdrive5_PowerControl_Get;
+static	ADL_OVERDRIVE5_POWERCONTROL_SET		ADL_Overdrive5_PowerControl_Set;
 static	ADL_OVERDRIVE5_FANSPEEDTODEFAULT_SET	ADL_Overdrive5_FanSpeedToDefault_Set;
+
+static	ADL_OVERDRIVE6_CAPABILITIES_GET		ADL_Overdrive6_Capabilities_Get;
+static	ADL_OVERDRIVE6_FANSPEED_GET		ADL_Overdrive6_FanSpeed_Get;
+static	ADL_OVERDRIVE6_THERMALCONTROLLER_CAPS	ADL_Overdrive6_ThermalController_Caps;
+static	ADL_OVERDRIVE6_TEMPERATURE_GET		ADL_Overdrive6_Temperature_Get;
+static	ADL_OVERDRIVE6_STATEINFO_GET		ADL_Overdrive6_StateInfo_Get;
+static	ADL_OVERDRIVE6_CURRENTSTATUS_GET	ADL_Overdrive6_CurrentStatus_Get;
+static	ADL_OVERDRIVE6_POWERCONTROL_CAPS	ADL_Overdrive6_PowerControl_Caps;
+static	ADL_OVERDRIVE6_POWERCONTROLINFO_GET	ADL_Overdrive6_PowerControlInfo_Get;
+static	ADL_OVERDRIVE6_POWERCONTROL_GET		ADL_Overdrive6_PowerControl_Get;
+static	ADL_OVERDRIVE6_FANSPEED_SET		ADL_Overdrive6_FanSpeed_Set;
+static	ADL_OVERDRIVE6_STATE_SET		ADL_Overdrive6_State_Set;
+static	ADL_OVERDRIVE6_POWERCONTROL_SET		ADL_Overdrive6_PowerControl_Set;
 
 #if defined (LINUX)
 	static void *hDLL;	// Handle to .so library
@@ -104,6 +121,7 @@ static	ADL_OVERDRIVE5_FANSPEEDTODEFAULT_SET	ADL_Overdrive5_FanSpeedToDefault_Set
 #endif
 static int iNumberAdapters;
 static LPAdapterInfo lpInfo = NULL;
+static LPADLDisplayInfo lpAdlDisplayInfo = NULL;
 
 int set_fanspeed(int gpu, int iFanSpeed);
 static float __gpu_temp(struct gpu_adl *ga);
@@ -131,6 +149,65 @@ static bool fanspeed_twin(struct gpu_adl *ga, struct gpu_adl *other_ga)
 	return true;
 }
 
+static bool init_overdrive5()
+{
+	ADL_Overdrive5_Temperature_Get = (ADL_OVERDRIVE5_TEMPERATURE_GET) GetProcAddress(hDLL,"ADL_Overdrive5_Temperature_Get");
+	ADL_Overdrive5_CurrentActivity_Get = (ADL_OVERDRIVE5_CURRENTACTIVITY_GET) GetProcAddress(hDLL, "ADL_Overdrive5_CurrentActivity_Get");
+	ADL_Overdrive5_ODParameters_Get = (ADL_OVERDRIVE5_ODPARAMETERS_GET) GetProcAddress(hDLL, "ADL_Overdrive5_ODParameters_Get");
+	ADL_Overdrive5_FanSpeedInfo_Get = (ADL_OVERDRIVE5_FANSPEEDINFO_GET) GetProcAddress(hDLL, "ADL_Overdrive5_FanSpeedInfo_Get");
+	ADL_Overdrive5_FanSpeed_Get = (ADL_OVERDRIVE5_FANSPEED_GET) GetProcAddress(hDLL, "ADL_Overdrive5_FanSpeed_Get");
+	ADL_Overdrive5_FanSpeed_Set = (ADL_OVERDRIVE5_FANSPEED_SET) GetProcAddress(hDLL, "ADL_Overdrive5_FanSpeed_Set");
+	ADL_Overdrive5_ODPerformanceLevels_Get = (ADL_OVERDRIVE5_ODPERFORMANCELEVELS_GET) GetProcAddress(hDLL, "ADL_Overdrive5_ODPerformanceLevels_Get");
+	ADL_Overdrive5_ODPerformanceLevels_Set = (ADL_OVERDRIVE5_ODPERFORMANCELEVELS_SET) GetProcAddress(hDLL, "ADL_Overdrive5_ODPerformanceLevels_Set");
+	ADL_Overdrive5_PowerControl_Get = (ADL_OVERDRIVE5_POWERCONTROL_GET) GetProcAddress(hDLL, "ADL_Overdrive5_PowerControl_Get");
+	ADL_Overdrive5_PowerControl_Set = (ADL_OVERDRIVE5_POWERCONTROL_SET) GetProcAddress(hDLL, "ADL_Overdrive5_PowerControl_Set");
+	ADL_Overdrive5_FanSpeedToDefault_Set = (ADL_OVERDRIVE5_FANSPEEDTODEFAULT_SET) GetProcAddress(hDLL, "ADL_Overdrive5_FanSpeedToDefault_Set");
+
+	if (!ADL_Overdrive5_Temperature_Get || !ADL_Overdrive5_CurrentActivity_Get ||
+		!ADL_Overdrive5_ODParameters_Get || !ADL_Overdrive5_FanSpeedInfo_Get ||
+		!ADL_Overdrive5_FanSpeed_Get || !ADL_Overdrive5_FanSpeed_Set ||
+		!ADL_Overdrive5_ODPerformanceLevels_Get || !ADL_Overdrive5_ODPerformanceLevels_Set ||
+		!ADL_Overdrive5_PowerControl_Get ||	!ADL_Overdrive5_PowerControl_Set ||
+		!ADL_Overdrive5_FanSpeedToDefault_Set) {
+			applog(LOG_WARNING, "ATI ADL Overdrive5's API is missing or broken.");
+			return false;
+	} else {
+		applog(LOG_INFO, "ATI ADL Overdrive5 API found.");
+	}
+
+	return true;
+}
+
+static bool init_overdrive6()
+{
+	ADL_Overdrive6_FanSpeed_Get = (ADL_OVERDRIVE6_FANSPEED_GET) GetProcAddress(hDLL,"ADL_Overdrive6_FanSpeed_Get");
+	ADL_Overdrive6_ThermalController_Caps = (ADL_OVERDRIVE6_THERMALCONTROLLER_CAPS)GetProcAddress (hDLL, "ADL_Overdrive6_ThermalController_Caps");
+	ADL_Overdrive6_Temperature_Get = (ADL_OVERDRIVE6_TEMPERATURE_GET)GetProcAddress (hDLL, "ADL_Overdrive6_Temperature_Get");
+	ADL_Overdrive6_Capabilities_Get = (ADL_OVERDRIVE6_CAPABILITIES_GET)GetProcAddress(hDLL, "ADL_Overdrive6_Capabilities_Get");
+	ADL_Overdrive6_StateInfo_Get = (ADL_OVERDRIVE6_STATEINFO_GET)GetProcAddress(hDLL, "ADL_Overdrive6_StateInfo_Get");
+	ADL_Overdrive6_CurrentStatus_Get = (ADL_OVERDRIVE6_CURRENTSTATUS_GET)GetProcAddress(hDLL, "ADL_Overdrive6_CurrentStatus_Get");
+	ADL_Overdrive6_PowerControl_Caps = (ADL_OVERDRIVE6_POWERCONTROL_CAPS)GetProcAddress(hDLL, "ADL_Overdrive6_PowerControl_Caps");
+	ADL_Overdrive6_PowerControlInfo_Get = (ADL_OVERDRIVE6_POWERCONTROLINFO_GET)GetProcAddress(hDLL, "ADL_Overdrive6_PowerControlInfo_Get");
+	ADL_Overdrive6_PowerControl_Get = (ADL_OVERDRIVE6_POWERCONTROL_GET)GetProcAddress(hDLL, "ADL_Overdrive6_PowerControl_Get");
+	ADL_Overdrive6_FanSpeed_Set  = (ADL_OVERDRIVE6_FANSPEED_SET)GetProcAddress(hDLL, "ADL_Overdrive6_FanSpeed_Set");
+	ADL_Overdrive6_State_Set = (ADL_OVERDRIVE6_STATE_SET)GetProcAddress(hDLL, "ADL_Overdrive6_State_Set");
+	ADL_Overdrive6_PowerControl_Set = (ADL_OVERDRIVE6_POWERCONTROL_SET) GetProcAddress(hDLL, "ADL_Overdrive6_PowerControl_Set");
+
+	if (!ADL_Overdrive6_FanSpeed_Get || !ADL_Overdrive6_ThermalController_Caps ||
+		!ADL_Overdrive6_Temperature_Get || !ADL_Overdrive6_Capabilities_Get ||
+		!ADL_Overdrive6_StateInfo_Get || !ADL_Overdrive6_CurrentStatus_Get ||
+		!ADL_Overdrive6_PowerControl_Caps || !ADL_Overdrive6_PowerControlInfo_Get ||
+		!ADL_Overdrive6_PowerControl_Get || !ADL_Overdrive6_FanSpeed_Set ||
+		!ADL_Overdrive6_State_Set || !ADL_Overdrive6_PowerControl_Set) {
+			applog(LOG_WARNING, "ATI ADL Overdrive6's API is missing or broken.");
+		return false;
+	} else {
+		applog(LOG_INFO, "ATI ADL Overdrive6 API found.");
+	}
+
+	return true;
+}
+
 static bool prepare_adl(void)
 {
 	int result;
@@ -145,55 +222,46 @@ static bool prepare_adl(void)
 		hDLL = LoadLibrary("atiadlxy.dll");
 #endif
 	if (hDLL == NULL) {
-		applog(LOG_INFO, "Unable to load ati adl library");
+		applog(LOG_INFO, "Unable to load ATI ADL library.");
 		return false;
 	}
 	ADL_Main_Control_Create = (ADL_MAIN_CONTROL_CREATE) GetProcAddress(hDLL,"ADL_Main_Control_Create");
 	ADL_Main_Control_Destroy = (ADL_MAIN_CONTROL_DESTROY) GetProcAddress(hDLL,"ADL_Main_Control_Destroy");
 	ADL_Adapter_NumberOfAdapters_Get = (ADL_ADAPTER_NUMBEROFADAPTERS_GET) GetProcAddress(hDLL,"ADL_Adapter_NumberOfAdapters_Get");
 	ADL_Adapter_AdapterInfo_Get = (ADL_ADAPTER_ADAPTERINFO_GET) GetProcAddress(hDLL,"ADL_Adapter_AdapterInfo_Get");
+	ADL_Display_DisplayInfo_Get = (ADL_DISPLAY_DISPLAYINFO_GET) GetProcAddress(hDLL,"ADL_Display_DisplayInfo_Get");
 	ADL_Adapter_ID_Get = (ADL_ADAPTER_ID_GET) GetProcAddress(hDLL,"ADL_Adapter_ID_Get");
-	ADL_Overdrive5_Temperature_Get = (ADL_OVERDRIVE5_TEMPERATURE_GET) GetProcAddress(hDLL,"ADL_Overdrive5_Temperature_Get");
-	ADL_Overdrive5_CurrentActivity_Get = (ADL_OVERDRIVE5_CURRENTACTIVITY_GET) GetProcAddress(hDLL, "ADL_Overdrive5_CurrentActivity_Get");
-	ADL_Overdrive5_ODParameters_Get = (ADL_OVERDRIVE5_ODPARAMETERS_GET) GetProcAddress(hDLL, "ADL_Overdrive5_ODParameters_Get");
-	ADL_Overdrive5_FanSpeedInfo_Get = (ADL_OVERDRIVE5_FANSPEEDINFO_GET) GetProcAddress(hDLL, "ADL_Overdrive5_FanSpeedInfo_Get");
-	ADL_Overdrive5_FanSpeed_Get = (ADL_OVERDRIVE5_FANSPEED_GET) GetProcAddress(hDLL, "ADL_Overdrive5_FanSpeed_Get");
-	ADL_Overdrive5_FanSpeed_Set = (ADL_OVERDRIVE5_FANSPEED_SET) GetProcAddress(hDLL, "ADL_Overdrive5_FanSpeed_Set");
-	ADL_Overdrive5_ODPerformanceLevels_Get = (ADL_OVERDRIVE5_ODPERFORMANCELEVELS_GET) GetProcAddress(hDLL, "ADL_Overdrive5_ODPerformanceLevels_Get");
-	ADL_Overdrive5_ODPerformanceLevels_Set = (ADL_OVERDRIVE5_ODPERFORMANCELEVELS_SET) GetProcAddress(hDLL, "ADL_Overdrive5_ODPerformanceLevels_Set");
 	ADL_Main_Control_Refresh = (ADL_MAIN_CONTROL_REFRESH) GetProcAddress(hDLL, "ADL_Main_Control_Refresh");
 	ADL_Adapter_VideoBiosInfo_Get = (ADL_ADAPTER_VIDEOBIOSINFO_GET)GetProcAddress(hDLL,"ADL_Adapter_VideoBiosInfo_Get");
-	ADL_Overdrive5_PowerControl_Get = (ADL_OVERDRIVE5_POWERCONTROL_GET) GetProcAddress(hDLL, "ADL_Overdrive5_PowerControl_Get");
-	ADL_Overdrive5_PowerControl_Set = (ADL_OVERDRIVE5_POWERCONTROL_SET) GetProcAddress(hDLL, "ADL_Overdrive5_PowerControl_Set");
-	ADL_Overdrive5_FanSpeedToDefault_Set = (ADL_OVERDRIVE5_FANSPEEDTODEFAULT_SET) GetProcAddress(hDLL, "ADL_Overdrive5_FanSpeedToDefault_Set");
+	ADL_Overdrive_Caps = (ADL_OVERDRIVE_CAPS)GetProcAddress(hDLL, "ADL_Overdrive_Caps");
+
+	ADL_Adapter_Accessibility_Get = (ADL_ADAPTER_ACCESSIBILITY_GET)GetProcAddress(hDLL, "ADL_Adapter_Accessibility_Get");
 
 	if (!ADL_Main_Control_Create || !ADL_Main_Control_Destroy ||
 		!ADL_Adapter_NumberOfAdapters_Get || !ADL_Adapter_AdapterInfo_Get ||
-		!ADL_Adapter_ID_Get || !ADL_Overdrive5_Temperature_Get ||
-		!ADL_Overdrive5_CurrentActivity_Get ||
-		!ADL_Overdrive5_ODParameters_Get || !ADL_Overdrive5_FanSpeedInfo_Get ||
-		!ADL_Overdrive5_FanSpeed_Get || !ADL_Overdrive5_FanSpeed_Set ||
-		!ADL_Overdrive5_ODPerformanceLevels_Get || !ADL_Overdrive5_ODPerformanceLevels_Set ||
-		!ADL_Main_Control_Refresh || !ADL_Overdrive5_PowerControl_Get ||
-		!ADL_Overdrive5_PowerControl_Set || !ADL_Overdrive5_FanSpeedToDefault_Set ||
-		!ADL_Adapter_VideoBiosInfo_Get) {
-			applog(LOG_WARNING, "ATI ADL's API is missing");
+		!ADL_Display_DisplayInfo_Get ||
+		!ADL_Adapter_ID_Get || !ADL_Main_Control_Refresh ||
+		!ADL_Adapter_VideoBiosInfo_Get || !ADL_Overdrive_Caps) {
+			applog(LOG_WARNING, "ATI ADL API is missing or broken.");
 		return false;
 	}
 
 	// Initialise ADL. The second parameter is 1, which means:
 	// retrieve adapter information only for adapters that are physically present and enabled in the system
-	result = ADL_Main_Control_Create (ADL_Main_Memory_Alloc, 1);
+	result = ADL_Main_Control_Create(ADL_Main_Memory_Alloc, 1);
 	if (result != ADL_OK) {
-		applog(LOG_INFO, "ADL Initialisation Error! Error %d!", result);
+		applog(LOG_INFO, "ADL initialisation error: %d!", result);
 		return false;
 	}
 
 	result = ADL_Main_Control_Refresh();
 	if (result != ADL_OK) {
-		applog(LOG_INFO, "ADL Refresh Error! Error %d!", result);
+		applog(LOG_INFO, "ADL refresh error: %d!", result);
 		return false;
 	}
+
+	init_overdrive5();
+	init_overdrive6(); // FIXME: don't if ADL6 is not present
 
 	return true;
 }
@@ -203,6 +271,10 @@ void init_adl(int nDevs)
 	int result, i, j, devices = 0, last_adapter = -1, gpu = 0, dummy = 0;
 	struct gpu_adapters adapters[MAX_GPUDEVICES], vadapters[MAX_GPUDEVICES];
 	bool devs_match = true;
+	ADLBiosInfo BiosInfo;
+	int iNumDisplays;
+
+	applog(LOG_INFO, "Number of ADL devices: %d", nDevs);
 
 	if (unlikely(pthread_mutex_init(&adl_lock, NULL))) {
 		applog(LOG_ERR, "Failed to init adl_lock in init_adl");
@@ -235,38 +307,57 @@ void init_adl(int nDevs)
 		return;
 	}
 
+	applog(LOG_INFO, "Found %d ADL adapters", iNumberAdapters);
+
 	/* Iterate over iNumberAdapters and find the lpAdapterID of real devices */
 	for (i = 0; i < iNumberAdapters; i++) {
 		int iAdapterIndex;
 		int lpAdapterID;
 
 		iAdapterIndex = lpInfo[i].iAdapterIndex;
+
 		/* Get unique identifier of the adapter, 0 means not AMD */
 		result = ADL_Adapter_ID_Get(iAdapterIndex, &lpAdapterID);
+
+		if (ADL_Adapter_VideoBiosInfo_Get(iAdapterIndex, &BiosInfo) == ADL_ERR) {
+			applog(LOG_INFO, "ADL index %d, id %d - FAILED to get BIOS info", iAdapterIndex, lpAdapterID);
+		} else {
+			applog(LOG_INFO, "ADL index %d, id %d - BIOS partno.: %s, version: %s, date: %s", iAdapterIndex, lpAdapterID, BiosInfo.strPartNumber, BiosInfo.strVersion, BiosInfo.strDate);
+		}
+
 		if (result != ADL_OK) {
 			applog(LOG_INFO, "Failed to ADL_Adapter_ID_Get. Error %d", result);
 			if (result == -10)
-				applog(LOG_INFO, "This error says the device is not enabled");
+				applog(LOG_INFO, "(Device is not enabled.)");
 			continue;
 		}
 
 		/* Each adapter may have multiple entries */
-		if (lpAdapterID == last_adapter)
+		if (lpAdapterID == last_adapter) {
 			continue;
+		}
 
-		applog(LOG_DEBUG, "GPU %d "
-		       "iAdapterIndex %d "
-		       "strUDID %s "
-		       "iBusNumber %d "
-		       "iDeviceNumber %d "
-		       "iFunctionNumber %d "
-		       "iVendorID %d "
-		       "strAdapterName  %s ",
+		applog(LOG_INFO, "GPU %d assigned: "
+		       "iAdapterIndex:%d "
+		       "iPresent:%d "
+		       "strUDID:%s "
+		       "iBusNumber:%d "
+		       "iDeviceNumber:%d "
+#if defined(__linux)
+		       "iDrvIndex:%d "
+#endif
+		       "iFunctionNumber:%d "
+		       "iVendorID:%d "
+		       "name:%s",
 		       devices,
-		       iAdapterIndex,
+		       lpInfo[i].iAdapterIndex,
+		       lpInfo[i].iPresent,
 		       lpInfo[i].strUDID,
 		       lpInfo[i].iBusNumber,
 		       lpInfo[i].iDeviceNumber,
+#if defined(__linux)
+		       lpInfo[i].iDrvIndex,
+#endif
 		       lpInfo[i].iFunctionNumber,
 		       lpInfo[i].iVendorID,
 		       lpInfo[i].strAdapterName);
@@ -310,8 +401,9 @@ void init_adl(int nDevs)
 		if (gpus[i].mapped) {
 			vadapters[gpus[i].virtual_adl].virtual_gpu = i;
 			applog(LOG_INFO, "Mapping OpenCL device %d to ADL device %d", i, gpus[i].virtual_adl);
-		} else
+		} else {
 			gpus[i].virtual_adl = i;
+		}
 	}
 
 	if (!devs_match) {
@@ -353,6 +445,7 @@ void init_adl(int nDevs)
 		int lpAdapterID;
 		ADLODPerformanceLevels *lpOdPerformanceLevels;
 		int lev, adlGpu;
+		size_t plsize;
 		ADLBiosInfo BiosInfo;
 
 		adlGpu = gpus[gpu].virtual_adl;
@@ -393,19 +486,22 @@ void init_adl(int nDevs)
 		strcpy(ga->strAdapterName, lpInfo[i].strAdapterName);
 		ga->DefPerfLev = NULL;
 		ga->twin = NULL;
+		ga->def_fan_valid = false;
 
-		result = ADL_Adapter_VideoBiosInfo_Get(iAdapterIndex, &BiosInfo);
-		if (result != ADL_ERR)
+		applog(LOG_INFO, "ADL GPU %d is Adapter index %d and maps to adapter id %d", ga->gpu, ga->iAdapterIndex, ga->lpAdapterID);
+
+		if (ADL_Adapter_VideoBiosInfo_Get(iAdapterIndex, &BiosInfo) != ADL_ERR)
 			applog(LOG_INFO, "GPU %d BIOS partno.: %s, version: %s, date: %s", gpu, BiosInfo.strPartNumber, BiosInfo.strVersion, BiosInfo.strDate);
-     
+
 		ga->lpOdParameters.iSize = sizeof(ADLODParameters);
 		if (ADL_Overdrive5_ODParameters_Get(iAdapterIndex, &ga->lpOdParameters) != ADL_OK)
 			applog(LOG_INFO, "Failed to ADL_Overdrive5_ODParameters_Get");
 
 		lev = ga->lpOdParameters.iNumberOfPerformanceLevels - 1;
 		/* We're only interested in the top performance level */
-		lpOdPerformanceLevels = malloc(sizeof(ADLODPerformanceLevels) + (lev * sizeof(ADLODPerformanceLevel)));
-		lpOdPerformanceLevels->iSize = sizeof(ADLODPerformanceLevels) + sizeof(ADLODPerformanceLevel) * lev;
+		plsize = sizeof(ADLODPerformanceLevels) + lev * sizeof(ADLODPerformanceLevel);
+		lpOdPerformanceLevels = malloc(plsize);
+		lpOdPerformanceLevels->iSize = plsize;
 
 		/* Get default performance levels first */
 		if (ADL_Overdrive5_ODPerformanceLevels_Get(iAdapterIndex, 1, lpOdPerformanceLevels) != ADL_OK)
@@ -416,10 +512,17 @@ void init_adl(int nDevs)
 		ga->lpTemperature.iSize = sizeof(ADLTemperature);
 		ga->lpFanSpeedInfo.iSize = sizeof(ADLFanSpeedInfo);
 		ga->lpFanSpeedValue.iSize = ga->DefFanSpeedValue.iSize = sizeof(ADLFanSpeedValue);
+		ga->lpFanSpeedValue.iSpeedType = ADL_DL_FANCTRL_SPEED_TYPE_RPM;
+		ga->DefFanSpeedValue.iSpeedType = ADL_DL_FANCTRL_SPEED_TYPE_RPM;
+
 		/* Now get the current performance levels for any existing overclock */
-		ADL_Overdrive5_ODPerformanceLevels_Get(iAdapterIndex, 0, lpOdPerformanceLevels);
-		/* Save these values as the defaults in case we wish to reset to defaults */
-		ga->DefPerfLev = lpOdPerformanceLevels;
+		if (ADL_Overdrive5_ODPerformanceLevels_Get(iAdapterIndex, 0, lpOdPerformanceLevels) != ADL_OK)
+			applog(LOG_INFO, "Failed to ADL_Overdrive5_ODPerformanceLevels_Get");
+		else {
+			/* Save these values as the defaults in case we wish to reset to defaults */
+			ga->DefPerfLev = malloc(plsize);
+			memcpy(ga->DefPerfLev, lpOdPerformanceLevels, plsize);
+		}
 
 		if (gpus[gpu].gpu_engine) {
 			int setengine = gpus[gpu].gpu_engine * 100;
@@ -474,25 +577,30 @@ void init_adl(int nDevs)
 
 		if (ADL_Overdrive5_FanSpeedInfo_Get(iAdapterIndex, 0, &ga->lpFanSpeedInfo) != ADL_OK)
 			applog(LOG_INFO, "Failed to ADL_Overdrive5_FanSpeedInfo_Get");
+
+		if(!(ga->lpFanSpeedInfo.iFlags & (ADL_DL_FANCTRL_SUPPORTS_RPM_WRITE | ADL_DL_FANCTRL_SUPPORTS_PERCENT_WRITE)))
+			ga->has_fanspeed = false;
 		else
 			ga->has_fanspeed = true;
-		ga->max_fanspeed_pct = -1;
 
 		/* Save the fanspeed values as defaults in case we reset later */
-		ga->DefFanSpeedValue.iSpeedType=ADL_DL_FANCTRL_SPEED_TYPE_PERCENT;
-		ADL_Overdrive5_FanSpeed_Get(ga->iAdapterIndex, 0, &ga->DefFanSpeedValue);
+		if (ADL_Overdrive5_FanSpeed_Get(iAdapterIndex, 0, &ga->DefFanSpeedValue) != ADL_OK)
+			applog(LOG_INFO, "Failed to ADL_Overdrive5_FanSpeed_Get for default value");
+		else
+			ga->def_fan_valid = true;
+
 		if (gpus[gpu].gpu_fan)
 			set_fanspeed(gpu, gpus[gpu].gpu_fan);
 		else
-			gpus[gpu].gpu_fan = GPU_FAN_NOMINAL_MAX; /* Set a nominal upper limit of 85% */
+			gpus[gpu].gpu_fan = gpu_fannominalmax; /* Set a nominal upper limit of 85% */
 
 		/* Not fatal if powercontrol get fails */
-		if (ADL_Overdrive5_PowerControl_Get(ga->iAdapterIndex, &ga->iPercentage, &dummy) != ADL_OK)
+		if (ADL_Overdrive5_PowerControl_Get(iAdapterIndex, &ga->iPercentage, &dummy) != ADL_OK)
 			applog(LOG_INFO, "Failed to ADL_Overdrive5_PowerControl_get");
 
 		if (gpus[gpu].gpu_powertune) {
-			ADL_Overdrive5_PowerControl_Set(ga->iAdapterIndex, gpus[gpu].gpu_powertune);
-			ADL_Overdrive5_PowerControl_Get(ga->iAdapterIndex, &ga->iPercentage, &dummy);
+			ADL_Overdrive5_PowerControl_Set(iAdapterIndex, gpus[gpu].gpu_powertune);
+			ADL_Overdrive5_PowerControl_Get(iAdapterIndex, &ga->iPercentage, &dummy);
 			ga->managed = true;
 		}
 
@@ -677,8 +785,6 @@ static inline int __gpu_fanspeed(struct gpu_adl *ga)
 	ga->lpFanSpeedValue.iSpeedType = ADL_DL_FANCTRL_SPEED_TYPE_RPM;
 	if (ADL_Overdrive5_FanSpeed_Get(ga->iAdapterIndex, 0, &ga->lpFanSpeedValue) != ADL_OK)
 		return -1;
-	if (ga->lpFanSpeedValue.iFanSpeed > ga->max_fanspeed_pct)
-		ga->max_fanspeed_pct = ga->lpFanSpeedValue.iFanSpeed;
 	return ga->lpFanSpeedValue.iFanSpeed;
 }
 
@@ -722,12 +828,12 @@ int gpu_fanpercent(int gpu)
 	lock_adl();
 	ret = __gpu_fanpercent(ga);
 	unlock_adl();
-	if (unlikely(ga->has_fanspeed && ret == -1 && ga->max_fanspeed_pct != -1)) {
+	if (unlikely(ga->has_fanspeed && ret == -1)) {
 #if 0
 		/* Recursive calling applog causes a hang, so disable messages */
 		applog(LOG_WARNING, "GPU %d stopped reporting fanspeed due to driver corruption", gpu);
 		if (opt_restart) {
-			applog(LOG_WARNING, "Restart enabled, will attempt to restart cgminer");
+			applog(LOG_WARNING, "Restart enabled, will attempt to restart sgminer");
 			applog(LOG_WARNING, "You can disable this with the --no-restart option");
 			app_restart();
 		}
@@ -1026,8 +1132,14 @@ int set_fanspeed(int gpu, int iFanSpeed)
 	ga->targetfan = iFanSpeed;
 
 	lock_adl();
+	ga->lpFanSpeedValue.iSpeedType = ADL_DL_FANCTRL_SPEED_TYPE_RPM;
 	if (ADL_Overdrive5_FanSpeed_Get(ga->iAdapterIndex, 0, &ga->lpFanSpeedValue) != ADL_OK) {
 		applog(LOG_DEBUG, "GPU %d call to fanspeed get failed", gpu);
+	}
+	if (!(ga->lpFanSpeedValue.iFlags & ADL_DL_FANCTRL_FLAG_USER_DEFINED_SPEED)) {
+		/* If user defined is not already specified, set it first */
+		ga->lpFanSpeedValue.iFlags |= ADL_DL_FANCTRL_FLAG_USER_DEFINED_SPEED;
+		ADL_Overdrive5_FanSpeed_Set(ga->iAdapterIndex, 0, &ga->lpFanSpeedValue);
 	}
 	if (!(ga->lpFanSpeedInfo.iFlags & ADL_DL_FANCTRL_SUPPORTS_PERCENT_WRITE)) {
 		/* Must convert speed to an RPM */
@@ -1035,11 +1147,6 @@ int set_fanspeed(int gpu, int iFanSpeed)
 		ga->lpFanSpeedValue.iSpeedType = ADL_DL_FANCTRL_SPEED_TYPE_RPM;
 	} else
 		ga->lpFanSpeedValue.iSpeedType = ADL_DL_FANCTRL_SPEED_TYPE_PERCENT;
-	if (!(ga->lpFanSpeedValue.iFlags & ADL_DL_FANCTRL_FLAG_USER_DEFINED_SPEED)) {
-		/* If user defined is not already specified, set it first */
-		ga->lpFanSpeedValue.iFlags = ADL_DL_FANCTRL_FLAG_USER_DEFINED_SPEED;
-		ADL_Overdrive5_FanSpeed_Set(ga->iAdapterIndex, 0, &ga->lpFanSpeedValue);
-	}
 	ga->lpFanSpeedValue.iFanSpeed = iFanSpeed;
 	ret = ADL_Overdrive5_FanSpeed_Set(ga->iAdapterIndex, 0, &ga->lpFanSpeedValue);
 	ga->managed = true;
@@ -1242,7 +1349,8 @@ void set_defaultfan(int gpu)
 
 	ga = &gpus[gpu].adl;
 	lock_adl();
-	ADL_Overdrive5_FanSpeed_Set(ga->iAdapterIndex, 0, &ga->DefFanSpeedValue);
+	if (ga->def_fan_valid)
+		ADL_Overdrive5_FanSpeed_Set(ga->iAdapterIndex, 0, &ga->DefFanSpeedValue);
 	unlock_adl();
 }
 
@@ -1254,7 +1362,8 @@ void set_defaultengine(int gpu)
 
 	ga = &gpus[gpu].adl;
 	lock_adl();
-	ADL_Overdrive5_ODPerformanceLevels_Set(ga->iAdapterIndex, ga->DefPerfLev);
+	if (ga->DefPerfLev)
+		ADL_Overdrive5_ODPerformanceLevels_Set(ga->iAdapterIndex, ga->DefPerfLev);
 	unlock_adl();
 }
 
@@ -1441,11 +1550,12 @@ void clear_adl(int nDevs)
 	for (i = 0; i < nDevs; i++) {
 		ga = &gpus[i].adl;
 		/*  Only reset the values if we've changed them at any time */
-		if (!gpus[i].has_adl || !ga->managed)
+		if (!gpus[i].has_adl || !ga->managed || !ga->DefPerfLev)
 			continue;
 		ADL_Overdrive5_ODPerformanceLevels_Set(ga->iAdapterIndex, ga->DefPerfLev);
 		free(ga->DefPerfLev);
-		ADL_Overdrive5_FanSpeed_Set(ga->iAdapterIndex, 0, &ga->DefFanSpeedValue);
+		if (ga->def_fan_valid)
+			ADL_Overdrive5_FanSpeed_Set(ga->iAdapterIndex, 0, &ga->DefFanSpeedValue);
 		ADL_Overdrive5_FanSpeedToDefault_Set(ga->iAdapterIndex, 0);
 	}
 	adl_active = false;

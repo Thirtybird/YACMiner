@@ -134,6 +134,9 @@ static bool opt_lowmem;
 bool opt_autofan;
 bool opt_autoengine;
 bool opt_noadl;
+#ifdef HAVE_ADL
+int gpu_fannominalmax = 85;
+#endif
 char *opt_api_allow = NULL;
 char *opt_api_groups;
 char *opt_api_description = PACKAGE_STRING;
@@ -4067,7 +4070,7 @@ void write_config(FILE *fcfg)
 			fprintf(fcfg, "%s%d-%d", i > 0 ? "," : "", gpus[i].min_engine, gpus[i].gpu_engine);
 		fputs("\",\n\"gpu-fan\" : \"", fcfg);
 		for(i = 0; i < nDevs; i++)
-			fprintf(fcfg, "%s%d-%d", i > 0 ? "," : "", gpus[i].min_fan, (gpus[i].gpu_fan != GPU_FAN_NOMINAL_MAX ? gpus[i].gpu_fan : 0));
+			fprintf(fcfg, "%s%d-%d", i > 0 ? "," : "", gpus[i].min_fan, (gpus[i].gpu_fan != gpu_fannominalmax ? gpus[i].gpu_fan : 0));
 		fputs("\",\n\"gpu-memclock\" : \"", fcfg);
 		for(i = 0; i < nDevs; i++)
 			fprintf(fcfg, "%s%d", i > 0 ? "," : "", gpus[i].gpu_memclock);

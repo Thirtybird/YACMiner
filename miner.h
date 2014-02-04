@@ -271,6 +271,9 @@ struct gpu_adl {
 	ADLFanSpeedValue lpFanSpeedValue;
 	ADLFanSpeedValue DefFanSpeedValue;
 
+	bool def_fan_valid;
+
+
 	int iEngineClock;
 	int iMemoryClock;
 	int iVddc;
@@ -714,6 +717,12 @@ static inline void
 endian_flip128(void __maybe_unused *dest_p, const void __maybe_unused *src_p)
 {
 }
+#endif
+
+#ifdef HAVE_ADL
+
+extern int gpu_fannominalmax;
+
 #endif
 
 extern void _quit(int status);
