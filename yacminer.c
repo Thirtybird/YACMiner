@@ -4773,7 +4773,7 @@ static void hashmeter(int thr_id, struct timeval *diff,
 	suffix_string(dh64, displayed_hashes, 4);
 	suffix_string(dr64, displayed_rolling, 4);
 
-	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  U:%.1f/m  WU:%.1f/m  FB:%d",
+	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  U:%.2f/m  WU:%.1f/m  FB:%d",
 		want_per_device_stats ? "ALL " : "",
 		opt_log_interval, displayed_rolling, displayed_hashes,
 		total_diff_accepted, total_diff_rejected, hw_errors, utility,
