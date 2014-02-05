@@ -1,3 +1,23 @@
+Version 3.4.1-yac2 - 5th February 2014
+
+- Wholesale replacement of ADL library with latest updates cloned
+ from SGMiner
+- Change of scan-time and expiry from 30/120 to 15/60
+- Increase precision of summary Utility score from 1/10 to 1/100
+
+Version 3.4.0-yac2 - 2nd February 2014
+
+- Major update - includes new parameters for fine-tuning YACoin mining
+	--buffer-size
+	--rawintensity
+	see the SCRYPT-README for details on these settings.
+- Minor changes include
+- Network difficulty line only shows up when it changes
+- fix for GPU fan going to 85% when saving and using a conf file
+- cgminer.conf should now be yacoin.conf (rename your file if you use it!)
+- Rewrote README as a .md file and updated SCRYPT-README to be more YACoin
+ specific
+
 Version 3.3.3-yac2 - 13th January 2014
 
 - Found block no longer reported or incremented if the nonce is invalid
