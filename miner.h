@@ -911,8 +911,8 @@ extern int opt_queue;
 extern int opt_scantime;
 extern int opt_expiry;
 
-extern unsigned int sc_minn;
-extern unsigned int sc_maxn;
+extern int sc_minn;
+extern int sc_maxn;
 extern long sc_starttime;
 extern unsigned int sc_currentn;
 
@@ -1132,6 +1132,10 @@ struct pool {
 	char *rpc_user, *rpc_pass;
 	curl_proxytype rpc_proxytype;
 	char *rpc_proxy;
+	int *sc_minn;
+	int *sc_maxn;
+	long *sc_starttime;
+
 
 	pthread_mutex_t pool_lock;
 	cglock_t data_lock;

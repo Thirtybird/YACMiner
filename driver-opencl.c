@@ -1233,13 +1233,13 @@ static cl_int queue_diablo_kernel(_clState *clState, dev_blk_ctx *blk, cl_uint t
 }
 
 #ifdef USE_SCRYPT
-unsigned char GetNfactor(unsigned int nTimestamp) {
+unsigned char GetNfactor(unsigned int nTimestamp, int minn, int maxn, long starttime) {
     int l = 0;
 
-    if (nTimestamp <= sc_starttime)
-        return sc_minn;
+    if (nTimestamp <= starttime)
+        return minn;
 
-    unsigned long int s = nTimestamp - sc_starttime;
+    unsigned long int s = nTimestamp - starttime;
     while ((s >> 1) > 3) {
       l += 1;
       s >>= 1;
@@ -1259,8 +1259,8 @@ unsigned char GetNfactor(unsigned int nTimestamp) {
 
 //    return min(max(N, minNfactor), maxNfactor);
 
-    if(N<sc_minn) return sc_minn;
-    if(N>sc_maxn) return sc_maxn;
+    if(N<minn) return minn;
+    if(N>maxn) return maxn;
     return N;
 }
 
@@ -1281,10 +1281,31 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 	cl_uint le_target;
 	cl_int status = 0;
 	uint32_t data[20];
+
+	int minn = sc_minn;
+	int maxn = sc_maxn;
+	long starttime = sc_starttime;
         
         unsigned int timestamp = bswap_32(*((unsigned int *)(blk->work->data + 17*4)));
 		// set the global variable for use in the hashmeter
-		sc_currentn = GetNfactor(timestamp);;
+//		printf("about to print sc_minn");
+		if (blk->work->pool->sc_minn)
+			{
+			minn = *blk->work->pool->sc_minn;
+			//applog(LOG_NOTICE,"in queue_scrypt_kernel, blk->work->pool->sc_minn: %d",*blk->work->pool->sc_minn);
+			}
+		if (blk->work->pool->sc_maxn)
+			{
+			maxn = *blk->work->pool->sc_maxn;
+			//applog(LOG_NOTICE,"in queue_scrypt_kernel, blk->work->pool->sc_maxn: %d",*blk->work->pool->sc_maxn);
+			}
+		if (blk->work->pool->sc_starttime)
+			{
+			starttime = *blk->work->pool->sc_starttime;
+			//applog(LOG_NOTICE,"in queue_scrypt_kernel, blk->work->pool->sc_maxn: %d",*blk->work->pool->sc_starttime);
+			}
+		//sc_currentn = GetNfactor(timestamp);
+		sc_currentn = GetNfactor(timestamp, minn, maxn, starttime);
         cl_uint nfactor = sc_currentn;
 
         

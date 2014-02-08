@@ -96,8 +96,8 @@ static const bool opt_time = true;
 unsigned long long global_hashrate;
 
 // Use parameters for YACoin for the defaults
-unsigned int sc_minn=4;
-unsigned int sc_maxn=30;
+int sc_minn=4;
+int sc_maxn=30;
 long sc_starttime=1367991200;
 unsigned int sc_currentn=4;
 
@@ -243,6 +243,7 @@ int total_pools, enabled_pools;
 enum pool_strategy pool_strategy = POOL_FAILOVER;
 int opt_rotate_period;
 static int total_urls, total_users, total_passes, total_userpasses;
+static int total_nfmin, total_nfmax, total_starttime, total_coin;
 
 static
 #ifndef HAVE_CURSES
@@ -580,18 +581,6 @@ char *set_time_range(const char *arg, long *i, long min, long max)
 	return NULL;
 }
 
-static char *set_timeval(const char *arg, long *i)
-{
-	return set_time_range(arg, i, 0, 2147483647);
-
-//	max val of a long 2147483647
-}
-
-static char *set_int_nrange(const char *arg, int *i)
-{
-	return set_int_range(arg, i, 0, 40);
-}
-
 static char *set_int_0_to_9999(const char *arg, int *i)
 {
 	return set_int_range(arg, i, 0, 9999);
@@ -802,6 +791,85 @@ static char *set_userpass(const char *arg)
 
 	return NULL;
 }
+
+static char *set_nfmin(const char *arg)
+{
+	struct pool *pool;
+	int i =sc_minn;
+
+	if (total_coin)
+		return "Use only nfmin,nfmax & starttime or coin, but not both";
+	total_nfmin++;
+	if (total_nfmin > total_pools)
+		add_pool();
+
+	pool = pools[total_nfmin - 1];
+
+	printf ("value of i:%d\n",i);
+
+	char *err = set_int_range(arg, &i, 0, 40);
+
+	printf ("value of i:%d\n",i);
+
+	if (err)
+		return err;
+
+	pool->sc_minn  = (int *)malloc(sizeof(int));
+	*pool->sc_minn = i;
+
+	printf ("value of pool->sc_minn:%d\n",*pool->sc_minn);
+
+	return NULL;
+}
+
+static char *set_nfmax(const char *arg)
+{
+	printf ("in set_nfmax");
+	struct pool *pool;
+	int i=sc_maxn;
+
+	if (total_coin)
+		return "Use only nfmin,nfmax & starttime or coin, but not both";
+	total_nfmax++;
+	if (total_nfmax > total_pools)
+		add_pool();
+
+	pool = pools[total_nfmax - 1];
+	
+	char *err = set_int_range(arg, &i, 0, 40);
+
+	if (err)
+		return err;
+
+	pool->sc_maxn  = (int *)malloc(sizeof(int));
+	*pool->sc_maxn = i;
+
+	return NULL;
+}
+
+static char *set_starttime(const char *arg)
+{
+	struct pool *pool;
+	long l = sc_starttime;
+
+	if (total_coin)
+		return "Use only nfmin,nfmax & starttime or coin, but not both";
+	total_starttime++;
+	if (total_starttime > total_pools)
+		add_pool();
+
+	pool = pools[total_starttime - 1];
+	char *err = set_time_range(arg, &l, 0, 2147483647);
+
+	if (err)
+		return err;
+
+	pool->sc_starttime  = (long *)malloc(sizeof(long));
+	*pool->sc_starttime = l;
+
+	return NULL;
+}
+
 
 static char *enable_debug(bool *flag)
 {
@@ -1136,11 +1204,11 @@ static struct opt_table opt_config_table[] = {
 			"Impose small delays in networking to not overload slow routers"),
 #ifdef USE_SCRYPT
 	OPT_WITH_ARG("--nfmin",
-			set_int_nrange,opt_show_intval, &sc_minn,
+			set_nfmin, NULL, NULL,
 			"Set min N factor for mining scrypt-chacha coins"),
 	OPT_WITH_ARG("--nfmax",
-			set_int_nrange,opt_show_intval, &sc_maxn,
-			"Set max N factor for mining scrypt-chache coins"),
+			set_nfmax, NULL, NULL,
+			"Set max N factor for mining scrypt-chacha coins"),
 #endif
 	OPT_WITHOUT_ARG("--no-adl",
 			opt_set_bool, &opt_noadl,
@@ -1230,7 +1298,7 @@ static struct opt_table opt_config_table[] = {
 		     "Set socks4 proxy (host:port)"),
 #ifdef USE_SCRYPT
 	OPT_WITH_ARG("--starttime",
-			set_timeval,opt_show_intval, &sc_starttime,
+			set_starttime, NULL, NULL,
 			"Set nStartTime for mining scrypt-jane"),
 #endif
 #ifdef HAVE_SYSLOG_H
@@ -4046,6 +4114,12 @@ void write_config(FILE *fcfg)
 			pools[i]->rpc_proxy ? json_escape(pools[i]->rpc_proxy) : "",
 			pools[i]->rpc_proxy ? "|" : "",
 			json_escape(pools[i]->rpc_url));
+		if (pools[i]->sc_minn)
+			fprintf(fcfg, "\n\t\t\"nfmin\" : \"%d\",", *pools[i]->sc_minn);
+		if (pools[i]->sc_maxn)
+			fprintf(fcfg, "\n\t\t\"nfmax\" : \"%d\",", *pools[i]->sc_maxn);
+		if (pools[i]->sc_starttime)
+			fprintf(fcfg, "\n\t\t\"starttime\" : \"%d\",", *pools[i]->sc_starttime);
 		fprintf(fcfg, "\n\t\t\"user\" : \"%s\",", json_escape(pools[i]->rpc_user));
 		fprintf(fcfg, "\n\t\t\"pass\" : \"%s\"\n\t}", json_escape(pools[i]->rpc_pass));
 		}
