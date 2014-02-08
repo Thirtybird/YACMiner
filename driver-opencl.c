@@ -1233,36 +1233,6 @@ static cl_int queue_diablo_kernel(_clState *clState, dev_blk_ctx *blk, cl_uint t
 }
 
 #ifdef USE_SCRYPT
-unsigned char GetNfactor(unsigned int nTimestamp, int minn, int maxn, long starttime) {
-    int l = 0;
-
-    if (nTimestamp <= starttime)
-        return minn;
-
-    unsigned long int s = nTimestamp - starttime;
-    while ((s >> 1) > 3) {
-      l += 1;
-      s >>= 1;
-    }
-
-    s &= 3;
-
-    int n = (l * 170 + s * 25 - 2320) / 100;
-
-    if (n < 0) n = 0;
-
-    if (n > 255)
-        printf("GetNfactor(%d) - something wrong(n == %d)\n", nTimestamp, n);
-
-    unsigned char N = (unsigned char)n;
-    //printf("GetNfactor: %d -> %d %d : %d / %d\n", nTimestamp - nChainStartTime, l, s, n, min(max(N, minNfactor), maxNfactor));
-
-//    return min(max(N, minNfactor), maxNfactor);
-
-    if(N<minn) return minn;
-    if(N>maxn) return maxn;
-    return N;
-}
 
 static inline void
 be32enc_vect(uint32_t *dst, const uint32_t *src, uint32_t len)

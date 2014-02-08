@@ -47,7 +47,6 @@ be32enc_vect(uint32_t *dst, const uint32_t *src, uint32_t len)
 		dst[i] = htobe32(src[i]);
 }
 
-static unsigned char GetNfactor(unsigned int nTimestamp);
 static void scrypt(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t salt_len, uint8_t Nfactor, uint8_t rfactor, uint8_t pfactor, uint8_t *out, size_t bytes);
 
 void scrypt_regenhash(struct work *work)
@@ -58,10 +57,32 @@ void scrypt_regenhash(struct work *work)
 
 	be32enc_vect(data, (const uint32_t *)work->data, 19);
 	data[19] = htobe32(*nonce);
-        
+
+	int minn = sc_minn;
+	int maxn = sc_maxn;
+	long starttime = sc_starttime;
+		
 	applog(LOG_DEBUG, "timestamp %d", data[17]);
         
-        int nfactor = GetNfactor(data[17]);
+		//applog(LOG_NOTICE,"Getting NFactor in scrypt_regenhash");
+//        int nfactor = GetNfactor(data[17]);
+
+		if (work->pool->sc_minn)
+			{
+			minn = *work->pool->sc_minn;
+			//applog(LOG_NOTICE,"in queue_scrypt_kernel, work->pool->sc_minn: %d",*work->pool->sc_minn);
+			}
+		if (work->pool->sc_maxn)
+			{
+			maxn = *work->pool->sc_maxn;
+			//applog(LOG_NOTICE,"in queue_scrypt_kernel, work->pool->sc_maxn: %d",*work->pool->sc_maxn);
+			}
+		if (work->pool->sc_starttime)
+			{
+			starttime = *work->pool->sc_starttime;
+			//applog(LOG_NOTICE,"in queue_scrypt_kernel, work->pool->sc_maxn: %d",*work->pool->sc_starttime);
+			}
+		int nfactor = GetNfactor(data[17], minn, maxn, starttime);
     
         applog(LOG_DEBUG, "Dat0: %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x", data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9],
             data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17], data[18], data[19]);
@@ -655,73 +676,3 @@ scrypt(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t
 	scrypt_free(&YX);
 }
 
-
-// yacoin: increasing Nfactor gradually
-static const unsigned char minNfactor = 4;
-static const unsigned char maxNfactor = 30;
-
-static unsigned char GetNfactor(unsigned int nTimestamp) {
-    int l = 0;
-
-    if (nTimestamp <= sc_starttime)
-        return sc_minn;
-
-    unsigned long int s = nTimestamp - sc_starttime;
-    while ((s >> 1) > 3) {
-      l += 1;
-      s >>= 1;
-    }
-
-    s &= 3;
-
-    int n = (l * 170 + s * 25 - 2320) / 100;
-
-    if (n < 0) n = 0;
-
-    if (n > 255)
-        printf("GetNfactor(%d) - something wrong(n == %d)\n", nTimestamp, n);
-
-    unsigned char N = (unsigned char)n;
-    //printf("GetNfactor: %d -> %d %d : %d / %d\n", nTimestamp - nChainStartTime, l, s, n, min(max(N, minNfactor), maxNfactor));
-
-//    return min(max(N, minNfactor), maxNfactor);
-
-    if(N<sc_minn) return sc_minn;
-    if(N>sc_maxn) return sc_maxn;
-    return N;
-}
-
-/* Used externally as confirmation of correct OCL code */
-int scrypt_test(unsigned char *pdata, const unsigned char *ptarget, uint32_t nonce)
-{
-	uint32_t tmp_hash7, Htarg = le32toh(((const uint32_t *)ptarget)[7]);
-	uint32_t data[20], ohash[8];
-
-	be32enc_vect(data, (const uint32_t *)pdata, 19);
-	data[19] = nonce;
-    
-        int nfactor = GetNfactor(data[17]);
-        
-        applog(LOG_DEBUG, "Dat0: %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x", data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9],
-            data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17], data[18], data[19]);
-    
-        scrypt((unsigned char *)data, 80, 
-                       (unsigned char *)data, 80, 
-                       nfactor, 0, 0, (unsigned char *)ohash, 32);
-    
-        uint32_t *o = ohash;
-	applog(LOG_DEBUG, "Nonce: %x, Output buffe0: %x %x %x %x %x %x %x %x", nonce, o[0], o[1], o[2], o[3], o[4], o[5], o[6], o[7]);
-    
-	tmp_hash7 = ohash[7];
-
-	applog(LOG_DEBUG, "Nonce %x harget %08lx diff1 %08lx hash %08lx",
-                                nonce,
-				(long unsigned int)Htarg,
-				(long unsigned int)diff1targ,
-				(long unsigned int)tmp_hash7);
-	if (tmp_hash7 > diff1targ)
-		return -1;
-	if (tmp_hash7 > Htarg)
-		return 0;
-	return 1;
-}

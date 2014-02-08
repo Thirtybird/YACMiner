@@ -1297,6 +1297,7 @@ struct modminer_fpga_state {
 };
 #endif
 
+extern unsigned char GetNfactor(unsigned int nTimestamp, int minn, int maxn, long starttime);
 extern void get_datestamp(char *, struct timeval *);
 extern void inc_hw_errors(struct thr_info *thr);
 extern bool submit_nonce(struct thr_info *thr, struct work *work, uint32_t nonce);
