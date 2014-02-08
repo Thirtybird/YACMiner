@@ -911,6 +911,11 @@ extern int opt_queue;
 extern int opt_scantime;
 extern int opt_expiry;
 
+extern unsigned int sc_minn;
+extern unsigned int sc_maxn;
+extern long sc_starttime;
+extern unsigned int sc_currentn;
+
 #ifdef USE_USBUTILS
 extern pthread_mutex_t cgusb_lock;
 extern pthread_mutex_t cgusbres_lock;

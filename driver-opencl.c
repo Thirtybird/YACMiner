@@ -1233,17 +1233,13 @@ static cl_int queue_diablo_kernel(_clState *clState, dev_blk_ctx *blk, cl_uint t
 }
 
 #ifdef USE_SCRYPT
-// yacoin: increasing Nfactor gradually
-const unsigned char minNfactor = 4;
-const unsigned char maxNfactor = 30;
-
 unsigned char GetNfactor(unsigned int nTimestamp) {
     int l = 0;
 
-    if (nTimestamp <= 1367991200)
-        return 4;
+    if (nTimestamp <= sc_starttime)
+        return sc_minn;
 
-    unsigned long int s = nTimestamp - 1367991200;
+    unsigned long int s = nTimestamp - sc_starttime;
     while ((s >> 1) > 3) {
       l += 1;
       s >>= 1;
@@ -1263,8 +1259,8 @@ unsigned char GetNfactor(unsigned int nTimestamp) {
 
 //    return min(max(N, minNfactor), maxNfactor);
 
-    if(N<minNfactor) return minNfactor;
-    if(N>maxNfactor) return maxNfactor;
+    if(N<sc_minn) return sc_minn;
+    if(N>sc_maxn) return sc_maxn;
     return N;
 }
 
@@ -1287,7 +1283,10 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 	uint32_t data[20];
         
         unsigned int timestamp = bswap_32(*((unsigned int *)(blk->work->data + 17*4)));
-        cl_uint nfactor = GetNfactor(timestamp);
+		// set the global variable for use in the hashmeter
+		sc_currentn = GetNfactor(timestamp);;
+        cl_uint nfactor = sc_currentn;
+
         
 	nfactor = (1 << (nfactor + 1));
         

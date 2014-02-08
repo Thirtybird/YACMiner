@@ -663,10 +663,10 @@ static const unsigned char maxNfactor = 30;
 static unsigned char GetNfactor(unsigned int nTimestamp) {
     int l = 0;
 
-    if (nTimestamp <= 1367991200)
-        return 4;
+    if (nTimestamp <= sc_starttime)
+        return sc_minn;
 
-    unsigned long int s = nTimestamp - 1367991200;
+    unsigned long int s = nTimestamp - sc_starttime;
     while ((s >> 1) > 3) {
       l += 1;
       s >>= 1;
@@ -686,8 +686,8 @@ static unsigned char GetNfactor(unsigned int nTimestamp) {
 
 //    return min(max(N, minNfactor), maxNfactor);
 
-    if(N<minNfactor) return minNfactor;
-    if(N>maxNfactor) return maxNfactor;
+    if(N<sc_minn) return sc_minn;
+    if(N>sc_maxn) return sc_maxn;
     return N;
 }
 

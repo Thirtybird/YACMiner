@@ -95,6 +95,12 @@ int opt_expiry = 60;
 static const bool opt_time = true;
 unsigned long long global_hashrate;
 
+// Use parameters for YACoin for the defaults
+unsigned int sc_minn=4;
+unsigned int sc_maxn=30;
+long sc_starttime=1367991200;
+unsigned int sc_currentn=4;
+
 #if defined(HAVE_OPENCL) || defined(USE_USBUTILS)
 int nDevs;
 #endif
@@ -554,6 +560,36 @@ char *set_int_range(const char *arg, int *i, int min, int max)
 		return "Value out of range";
 
 	return NULL;
+}
+
+char *set_time_range(const char *arg, long *i, long min, long max)
+{
+	long l;
+	char *err = opt_set_longval(arg, &l);
+
+	if (err)
+		return err;
+
+	*i = l;
+	if (*i != l)
+		return "value '%s' does not fit into a long";
+
+	if (*i < min || *i > max)
+		return "Value out of range";
+
+	return NULL;
+}
+
+static char *set_timeval(const char *arg, long *i)
+{
+	return set_time_range(arg, i, 0, 2147483647);
+
+//	max val of a long 2147483647
+}
+
+static char *set_int_nrange(const char *arg, int *i)
+{
+	return set_int_range(arg, i, 0, 40);
 }
 
 static char *set_int_0_to_9999(const char *arg, int *i)
@@ -1098,6 +1134,14 @@ static struct opt_table opt_config_table[] = {
 	OPT_WITHOUT_ARG("--net-delay",
 			opt_set_bool, &opt_delaynet,
 			"Impose small delays in networking to not overload slow routers"),
+#ifdef USE_SCRYPT
+	OPT_WITH_ARG("--nfmin",
+			set_int_nrange,opt_show_intval, &sc_minn,
+			"Set min N factor for mining scrypt-chacha coins"),
+	OPT_WITH_ARG("--nfmax",
+			set_int_nrange,opt_show_intval, &sc_maxn,
+			"Set max N factor for mining scrypt-chache coins"),
+#endif
 	OPT_WITHOUT_ARG("--no-adl",
 			opt_set_bool, &opt_noadl,
 #ifdef HAVE_ADL
@@ -1184,6 +1228,11 @@ static struct opt_table opt_config_table[] = {
 	OPT_WITH_ARG("--socks-proxy",
 		     opt_set_charp, NULL, &opt_socks_proxy,
 		     "Set socks4 proxy (host:port)"),
+#ifdef USE_SCRYPT
+	OPT_WITH_ARG("--starttime",
+			set_timeval,opt_show_intval, &sc_starttime,
+			"Set nStartTime for mining scrypt-jane"),
+#endif
 #ifdef HAVE_SYSLOG_H
 	OPT_WITHOUT_ARG("--syslog",
 			opt_set_bool, &use_syslog,
@@ -4773,11 +4822,12 @@ static void hashmeter(int thr_id, struct timeval *diff,
 	suffix_string(dh64, displayed_hashes, 4);
 	suffix_string(dr64, displayed_rolling, 4);
 
-	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  U:%.2f/m  WU:%.1f/m  FB:%d",
+//	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  U:%.2f/m  WU:%.1f/m  FB:%d",
+	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  U:%.2f/m  NF:%d  FB:%d",
 		want_per_device_stats ? "ALL " : "",
 		opt_log_interval, displayed_rolling, displayed_hashes,
 		total_diff_accepted, total_diff_rejected, hw_errors, utility,
-		total_diff1 / total_secs * 60, found_blocks);
+		sc_currentn, found_blocks);
 
 	local_mhashes_done = 0;
 out_unlock:
