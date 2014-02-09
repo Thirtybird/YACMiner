@@ -1275,8 +1275,9 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 			//applog(LOG_NOTICE,"in queue_scrypt_kernel, blk->work->pool->sc_maxn: %d",*blk->work->pool->sc_starttime);
 			}
 		//sc_currentn = GetNfactor(timestamp);
-		sc_currentn = GetNfactor(timestamp, minn, maxn, starttime);
-        cl_uint nfactor = sc_currentn;
+		blk->work->pool->sc_lastnfactor = GetNfactor(timestamp, minn, maxn, starttime);
+		sc_currentn = blk->work->pool->sc_lastnfactor;
+        cl_uint nfactor = blk->work->pool->sc_lastnfactor;
 
         
 	nfactor = (1 << (nfactor + 1));

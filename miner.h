@@ -1135,6 +1135,7 @@ struct pool {
 	int *sc_minn;
 	int *sc_maxn;
 	long *sc_starttime;
+	unsigned int sc_lastnfactor;
 
 
 	pthread_mutex_t pool_lock;

@@ -2242,11 +2242,11 @@ static void curses_print_status(void)
 		mvwprintw(statuswin, 4, 0, " Connected to multiple pools with%s LP",
 			have_longpoll ? "": "out");
 	} else if (pool->has_stratum) {
-		mvwprintw(statuswin, 4, 0, " Connected to %s diff %s with stratum as user %s",
-			pool->sockaddr_url, pool->diff, pool->rpc_user);
+		mvwprintw(statuswin, 4, 0, " Connected to %s diff %s NF %d with stratum as user %s",
+			pool->sockaddr_url, pool->diff, pool->sc_lastnfactor, pool->rpc_user);
 	} else {
-		mvwprintw(statuswin, 4, 0, " Connected to %s diff %s with%s %s as user %s",
-			pool->sockaddr_url, pool->diff, have_longpoll ? "": "out",
+		mvwprintw(statuswin, 4, 0, " Connected to %s diff %s NF %d with%s %s as user %s",
+			pool->sockaddr_url, pool->diff, pool->sc_lastnfactor, have_longpoll ? "": "out",
 			pool->has_gbt ? "GBT" : "LP", pool->rpc_user);
 	}
 	wclrtoeol(statuswin);
