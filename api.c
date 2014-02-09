@@ -2445,7 +2445,7 @@ static void addpool(struct io_data *io_data, __maybe_unused SOCKETTYPE c, char *
 
 	pool = add_pool();
 	detect_stratum(pool, url);
-	add_pool_details(pool, true, url, user, pass);
+	add_pool_details(pool, true, url, user, pass, 0, 0, 0);
 
 	ptr = escape_string(url, isjson);
 	message(io_data, MSG_ADDPOOL, 0, ptr, isjson);

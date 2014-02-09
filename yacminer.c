@@ -807,7 +807,7 @@ static char *set_nfmin(const char *arg)
 
 	printf ("value of i:%d\n",i);
 
-	char *err = set_int_range(arg, &i, 0, 40);
+	char *err = set_int_range(arg, &i, MIN_NFACTOR, MAX_NFACTOR);
 
 	printf ("value of i:%d\n",i);
 
@@ -836,7 +836,7 @@ static char *set_nfmax(const char *arg)
 
 	pool = pools[total_nfmax - 1];
 	
-	char *err = set_int_range(arg, &i, 0, 40);
+	char *err = set_int_range(arg, &i, MIN_NFACTOR, MAX_NFACTOR);
 
 	if (err)
 		return err;
@@ -859,7 +859,7 @@ static char *set_starttime(const char *arg)
 		add_pool();
 
 	pool = pools[total_starttime - 1];
-	char *err = set_time_range(arg, &l, 0, 2147483647);
+	char *err = set_time_range(arg, &l, 1, MAX_STARTTIME);
 
 	if (err)
 		return err;
@@ -1236,10 +1236,10 @@ static struct opt_table opt_config_table[] = {
 #ifdef USE_SCRYPT
 	OPT_WITH_ARG("--nfmin",
 			set_nfmin, NULL, NULL,
-			"Set min N factor for mining scrypt-chacha coins"),
+			"Set min N factor for mining scrypt-chacha coins (" MIN_NFACTOR_STR " to " MAX_NFACTOR_STR ")"),
 	OPT_WITH_ARG("--nfmax",
 			set_nfmax, NULL, NULL,
-			"Set max N factor for mining scrypt-chacha coins"),
+			"Set max N factor for mining scrypt-chacha coins (" MIN_NFACTOR_STR " to " MAX_NFACTOR_STR ")"),
 #endif
 	OPT_WITHOUT_ARG("--no-adl",
 			opt_set_bool, &opt_noadl,
@@ -7021,7 +7021,8 @@ static void *test_pool_thread(void *arg)
 /* Always returns true that the pool details were added unless we are not
  * live, implying this is the only pool being added, so if no pools are
  * active it returns false. */
-bool add_pool_details(struct pool *pool, bool live, char *url, char *user, char *pass)
+bool add_pool_details(struct pool *pool, bool live, char *url, char *user, char *pass,
+						int nfmin, int nfmax, long starttime)
 {
 	url = get_proxy(url, pool);
 
@@ -7032,6 +7033,22 @@ bool add_pool_details(struct pool *pool, bool live, char *url, char *user, char 
 	if (!pool->rpc_userpass)
 		quit(1, "Failed to malloc userpass");
 	sprintf(pool->rpc_userpass, "%s:%s", pool->rpc_user, pool->rpc_pass);
+
+	if (nfmin)
+	{
+		pool->sc_minn  = (int *)malloc(sizeof(int));
+		*pool->sc_minn = nfmin;
+	}
+	if (nfmax)
+	{
+		pool->sc_maxn  = (int *)malloc(sizeof(int));
+		*pool->sc_maxn = nfmax;
+	}
+	if (starttime)
+	{
+		pool->sc_starttime  = (long *)malloc(sizeof(long));
+		*pool->sc_starttime = starttime;
+	}
 
 	pool->testing = true;
 	pool->idle = true;
@@ -7050,6 +7067,10 @@ bool add_pool_details(struct pool *pool, bool live, char *url, char *user, char 
 static bool input_pool(bool live)
 {
 	char *url = NULL, *user = NULL, *pass = NULL;
+	char *nfmin = NULL, *nfmax = NULL, *starttime = NULL;
+	int i_nfmin = 0, i_nfmax = 0; 
+	long l_starttime = 0;
+
 	struct pool *pool;
 	bool ret = false;
 
@@ -7068,6 +7089,39 @@ static bool input_pool(bool live)
 	if (!pass)
 		goto out;
 
+	nfmin = curses_input("Minimum N Factor");
+	if (!nfmin)
+		goto out;
+	else
+	{
+		if (strcmp(nfmin,"-1") == 0)
+			i_nfmin = 0;
+		else
+			i_nfmin = min(max(atoi(nfmin),MIN_NFACTOR),MAX_NFACTOR);
+	}
+
+	nfmax = curses_input("Maximum N Factor");
+	if (!nfmax)
+		goto out;
+	else
+	{
+		if (strcmp(nfmax,"-1") == 0)
+			i_nfmax = 0;
+		else
+			i_nfmax = min(max(atoi(nfmax),MIN_NFACTOR),MAX_NFACTOR);
+	}
+
+	starttime = curses_input("Coin Start Time");
+	if (!starttime)
+		goto out;
+	else
+	{
+		if (strcmp(starttime,"-1") == 0)
+			l_starttime = 0;
+		else
+			l_starttime = min(max(atoi(nfmax),1),MAX_STARTTIME);
+	}
+	
 	pool = add_pool();
 
 	if (!detect_stratum(pool, url) && strncmp(url, "http://", 7) &&
@@ -7083,7 +7137,7 @@ static bool input_pool(bool live)
 		url = httpinput;
 	}
 
-	ret = add_pool_details(pool, live, url, user, pass);
+	ret = add_pool_details(pool, live, url, user, pass, i_nfmin, i_nfmax, l_starttime);
 out:
 	immedok(logwin, false);
 
@@ -7094,6 +7148,12 @@ out:
 			free(user);
 		if (pass)
 			free(pass);
+		if (nfmin)
+			free(nfmin);
+		if (nfmax)
+			free(nfmax);
+		if (starttime)
+			free(starttime);
 	}
 	return ret;
 }

@@ -957,7 +957,7 @@ extern void get_intrange(char *arg, int *val1, int *val2);
 extern bool detect_stratum(struct pool *pool, char *url);
 extern void print_summary(void);
 extern struct pool *add_pool(void);
-extern bool add_pool_details(struct pool *pool, bool live, char *url, char *user, char *pass);
+extern bool add_pool_details(struct pool *pool, bool live, char *url, char *user, char *pass, int nfmin, int nfmax, long starttime);
 
 #define MAX_GPUDEVICES 16
 #define MAX_DEVICES 4096
@@ -975,6 +975,12 @@ extern bool add_pool_details(struct pool *pool, bool live, char *url, char *user
 #define MAX_RAWINTENSITY 2147483647
 #define MAX_RAWINTENSITY_STR "2147483647"
 
+#define MIN_NFACTOR 4
+#define MIN_NFACTOR_STR "4"
+#define MAX_NFACTOR 40
+#define MAX_NFACTOR_STR "40"
+#define MAX_STARTTIME 2147483647
+#define MAX_STARTTIME_STR "2147483647"
 
 extern bool hotplug_mode;
 extern int hotplug_time;
