@@ -647,8 +647,6 @@ bool fulltest(const unsigned char *hash, const unsigned char *target)
 		uint32_t h32tmp = htobe32(hash32[i]);
 		uint32_t t32tmp = htole32(target32[i]);
 
-		target32[i] = swab32(target32[i]);	/* for printing */
-
 		if (h32tmp > t32tmp) {
 			rc = false;
 			break;
@@ -660,6 +658,9 @@ bool fulltest(const unsigned char *hash, const unsigned char *target)
 	}
 
 	if (opt_debug) {
+		for (i = 0; i < 32/4; i++) {
+			target32[i] = swab32(target32[i]);	/* for printing */
+		}
 		hash_str = bin2hex(hash_swap, 32);
 		target_str = bin2hex(target_swap, 32);
 
