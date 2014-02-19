@@ -7097,7 +7097,13 @@ static bool input_pool(bool live)
 		if (strcmp(nfmin,"-1") == 0)
 			i_nfmin = 0;
 		else
-			i_nfmin = min(max(atoi(nfmin),MIN_NFACTOR),MAX_NFACTOR);
+			{
+			i_nfmin = atoi(nfmin);
+			if (i_nfmin < MIN_NFACTOR)
+				i_nfmin = MIN_NFACTOR;
+			if (i_nfmin > MAX_NFACTOR)
+				i_nfmin = MAX_NFACTOR;
+			}
 	}
 
 	nfmax = curses_input("Maximum N Factor");
@@ -7108,7 +7114,13 @@ static bool input_pool(bool live)
 		if (strcmp(nfmax,"-1") == 0)
 			i_nfmax = 0;
 		else
-			i_nfmax = min(max(atoi(nfmax),MIN_NFACTOR),MAX_NFACTOR);
+			{
+			i_nfmin = atoi(nfmax);
+			if (i_nfmax < MIN_NFACTOR)
+				i_nfmax = MIN_NFACTOR;
+			if (i_nfmax > MAX_NFACTOR)
+				i_nfmax = MAX_NFACTOR;
+			}
 	}
 
 	starttime = curses_input("Coin Start Time");
@@ -7119,7 +7131,13 @@ static bool input_pool(bool live)
 		if (strcmp(starttime,"-1") == 0)
 			l_starttime = 0;
 		else
-			l_starttime = min(max(atoi(nfmax),1),MAX_STARTTIME);
+			{
+			l_starttime = atol(starttime);
+			if (l_starttime < 1)
+				l_starttime = 1;
+			if (l_starttime > MAX_STARTTIME)
+				l_starttime = MAX_STARTTIME;
+			}
 	}
 	
 	pool = add_pool();
