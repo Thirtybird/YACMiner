@@ -1,3 +1,18 @@
+Version 3.4.2-yac2 - 19th February 2014
+
+- Implementation of --nfmin, --nfmax, and --starttime to allow 
+ mining of coins other than YACoin
+- Update of SCRYPT-README to clarify how best to tune your miner 
+ using the settings available and how to use the new NFMin, 
+ NFMax, and StartTime parameters
+
+The new settings for NFMin, NFMax, and StartTime are _POOL_LEVEL_ 
+ values, and if you are setting any pool to be mined that is not 
+ YACoin, all pools must have these values set.  Note that currently, 
+ if your miner switches to a pool with a different NFactor, the 
+ settings for each card will not change, and will not likely be 
+ optimal for that pool.  (This feature is in the works)
+
 Version 3.4.1-yac2 - 5th February 2014
 
 - Wholesale replacement of ADL library with latest updates cloned
