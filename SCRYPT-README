@@ -27,8 +27,9 @@ OpenCL SDK installed, for AMD it must be version 2.6 or later.
 Step 1 on linux:
 
 	export GPU_MAX_ALLOC_PERCENT=100
+	export GPU_MAX_HEAP_SIZE=100
 
-If you do not do this, you may find it impossible to scrypt mine. You may find
+If you do not do this, you may find it impossible to mine. You may find
 a value of 40 is enough and increasing this further has little effect.
 
 	export GPU_USE_SYNC_OBJECTS=1
@@ -41,36 +42,45 @@ lines are in the .bat before starting YACMiner:
 	setx GPU_MAX_ALLOC_PERCENT 100
 	setx GPU_USE_SYNC_OBJECTS 1
 
---intensity XX (-I XX)
+--thread-concurrency:
+Absolutely set this.  This adjusts the size of the OpenCL buffer to allocate 
+to each thread.  This value should be based on the amount of available memory 
+on your GPU.  This setting is affected by lookup-gap as well, utilizing the 
+following formula for lookup-gaps of 1,2 & 4
 
-Just like in bitcoin mining, scrypt mining takes an intensity, however the
-scale goes from 0 to 20 to mimic the "Aggression" used in mtrlt's reaper. The
-reason this is crucial is that too high an intensity can actually be
-disastrous with scrypt because it CAN run out of ram. High intensities
-start writing over the same ram and it is highly dependent on the GPU, but they
-can start actually DECREASING your hashrate, or even worse, start producing
-garbage with HW errors skyrocketing. Note that if you do NOT specify an
-intensity, YACMiner uses dynamic mode which is designed to minimise the harm
-to a running desktop and performance WILL be poor. The lower limit to intensity
-is controlled by the work size and is 8 with a work size of 256.  Lower work
-sizes will allow a lower intensity.
-SUMMARY: Setting this for reasonable hashrates is mandatory.
+MB per thread = thread-concurrency * 128 / (1024 * lookup-gap)
 
---xintensity XX (-X xx)
-All of this is credited to ArGee of RGMiner, he did the initial ground work for 
-this setting.
+A good example of this: lookup-gap of 2, thread-concurrency of 8192 = 512 MB
 
-This setting is included as an option, however will not be useful on most cards
-as the number of shaders is too high for the amount of memory available on those
-cards.  This setting has been found to be useful on the AMD R7 240 and R7 250, 
-however, --rawintensity can give better results with some tweaking.
+As the NFactor for YACoin increases, the more memory that can be allocated per
+thread, the better performance you typically can achieve.
+SUMMARY: adjust this value first - Run GPUz to monitor the amount of dedicated
+memory used on the card until it moves into the dynamic column, then reduce it
+back down.  YACMiner will tell you at the start how much memory has been
+allocated per thread
+
+--lookup-gap:
+This tunes a compromise between ram usage and performance. Performance peaks
+at a gap of 2, but increasing the gap may allow you to run at a higher rate
+as more shaders in the card get utilized.  Setting lookup gap overrides the 
+default of 2.
+SUMMARY: Start at 2, and try 4 and 8, adjusting thread-concurrency to
+maximize the amount of memory allocated
+
+--worksize XX (-w XX):
+Has a minor effect, should be a multiple of 32 up to 256 maximum.  This sets
+the smallest size of work being sent to the GPU, and affects the values allowed
+in Raw Intensity.  
+SUMMARY: Higher values are better for cards with higher shader counts and 7XXX
+    series cards and newer.  Lower values for older cards give finer ranges of
+    Raw Intensity to maximize performance.
 
 --rawintensity XXXX (-R XXXX)
 All of this is credited to Kalroth.
 
 This new setting allows for a much finer grained intensity setting and also opens 
 up for dual cpu threads on devices not previously able to. Note: make sure to use 
-lower rawintensity values when you increase cpu threads (-g).
+much lower raw-intensity values when you increase cpu threads (-g).
 
 The original Intensity setting is currently used to spawn GPU threads as a 
 simple 2^value setting.
@@ -94,47 +104,19 @@ regular intensity setting is still available.
 You can also set this value through the ncurses interface by pressing:
 G -> A -> select device id -> enter value.
 
-Values need to be in multiples of 8 (at a minimum), and older cards appear to need
-a multiple of 64.  Start with 256, 512, or 1024 and adjust in increments of 64 either
-up or down.  Adjust this until you no longer receive HW errors in the GUI.
+Valid values for raw-intensity need to be in multiples of --worksize.  Cards in the 
+R7 and R9 family may allow for adjustment in smaller increments - the lowest found 
+has been adjustment in multiples of 8.  The following is a guideline on where to 
+start with your card and will most likely not be the exact numbers you end up with.
 
---shaders XXX
+Memory	# of shaders	LG	Raw Intensity
+1GB	Low Shaders	4	Shaders*4
+2GB	Low Shaders	2	Shaders*2
+2GB	Low Shaders	4	Shaders*8
+1GB	High Shaders	8	Shaders*1
+2GB	High Shaders	4	Shaders*2
 
-is a new option where you tell YACMiner how many shaders your GPU has. This
-helps YACMiner try to choose some meaningful baseline parameters. Use this table
-below to determine how many shaders your GPU has, and note that there are some
-variants of these cards, and nvidia shaders are much much lower and virtually
-pointless trying to mine on. If this is not set, YACMiner will query the
-device for how much memory it supports and will try to set a value based on
-that.
-SUMMARY: This will get you started but fine tuning for optimal performance is
-required.
-
---thread-concurrency:
-Absolutely set this.  This adjusts the size of the OpenCL buffer to allocate 
-to each thread.  This value should be based on the amount of available memory 
-on your GPU.  This setting is affected by lookup-gap as well, utilizing the 
-following formula for lookup-gaps of 1,2 & 4
-
-MB per thread = thread-concurrency * 128 / (1024 * lookup-gap)
-
-A good example of this: lookup-gap of 2, thread-concurrency of 8192 = 512 MB
-
-As the NFactor for YACoin increases, the more memory that can be allocated per
-thread, the better performance you typically can achieve.
-SUMMARY: adjust this value first - Run GPUz to monitor the amount of dedicated
-memory used on the card until it moves into the dynamic column, then reduce it
-back down.  YACMiner will tell you at the start how much memory has been
-allocated per thread
-
---lookup-gap:
-This tunes a compromise between ram usage and performance. Performance peaks
-at a gap of 2, but increasing the gap can save you some GPU ram, but almost
-always at the cost of significant loss of hashrate. Setting lookup gap
-overrides the default of 2, but YACMiner will use the --shaders value to choose
-a thread-concurrency if you haven't chosen one.
-SUMMARY: Start at 2, and try 1 and 4, adjusting thread-concurrency to
-maximize the amount of memory allocated
+Adjust Raw Intensity up and/or down until you no longer receive HW errors in the GUI.
 
 Optional parameters to tune:
 -g:
@@ -146,17 +128,87 @@ allocate all of the memory with just 1 thread.
 
 --buffer-size:
 Specify the amount of memory to allocate per thread in MB.  For now, still set
-thread-concurrency, but this parameter can allocate slightly more memory.
+thread-concurrency and lookup-gap, but this parameter can allocate slightly 
+more memory.  This will become the driving parameter in later version of YACMiner.
 
-Related parameters:
---worksize XX (-w XX):
-Has a minor effect, should be a multiple of 64 up to 256 maximum.
-SUMMARY: Worth playing with once everything else has been tried but will
-probably do nothing.
+Other available parameters that have better alternatives:
+--intensity XX (-I XX)
+Just like in bitcoin mining, scrypt mining takes an intensity, however the
+scale goes from 0 to 20 to mimic the "Aggression" used in mtrlt's reaper. The
+reason this is crucial is that too high an intensity can actually be
+disastrous with scrypt because it CAN run out of ram. High intensities
+start writing over the same ram and it is highly dependent on the GPU, but they
+can start actually DECREASING your hashrate, or even worse, start producing
+garbage with HW errors skyrocketing. Note that if you do NOT specify an
+intensity, YACMiner uses dynamic mode which is designed to minimise the harm
+to a running desktop and performance WILL be poor. The lower limit to intensity
+is controlled by the work size and is 8 with a work size of 256.  Lower work
+sizes will allow a lower intensity.
+SUMMARY: Setting this for reasonable hashrates is mandatory.  This setting is
+    not recommended for coins with a high NFactor - use --raw-intensity
+
+--xintensity XX (-X xx)
+All of this is credited to ArGee of RGMiner, he did the initial ground work for 
+this setting.
+
+This setting is included as an option, however will not be useful on most cards
+as the number of shaders is too high for the amount of memory available on those
+cards.  This setting has been found to be useful on the AMD R7 240 and R7 250, 
+however, --rawintensity can give the same, or better results with some tweaking.
+
+--shaders XXX
+is an option where you tell YACMiner how many shaders your GPU has. This
+helps YACMiner try to choose some meaningful baseline parameters. Use this table
+below to determine how many shaders your GPU has, and note that there are some
+variants of these cards, and nvidia shaders are much much lower and virtually
+pointless trying to mine on. If this is not set, YACMiner will query the
+device for how much memory it supports and will try to set a value based on
+that.
+SUMMARY: This is carried over from low N scrypt mining .  You really want to 
+    be setting thread-concurrency, lookup-gap and raw-intensity instead.
 
 --vectors XX (-v XX)
 Vectors are NOT used by the scrypt mining kernel.
 SUMMARY: Does nothing.
+
+Mining Other Scrypt-Chacha Coins: (version 3.4.2 and higher)
+The following paramters are included to allow the user to specify parameters needed
+to mine other SC based coins, such as YBCoin, Lottery Tickets, and Microcoin.
+Each of these parameters are tied to a specific pool, so for every pool specified by
+the -o parameter, you will need to specify each of the following or that pool will
+default to the values used for YACoin.
+
+Example (single line broken up for readability):
+yacminer --scrypt --worksize 32 --lookup-gap 4 -g 1 -R 736 --thread-concurrency 24192 
+    -o stratum+tcp://yac.coinmine.pl:9088 -u Me.miner -p x --nfmin 4 --nfmax 30 --starttime 1367991200 
+    -o stratum+tcp://tix.coinmine.pl:6111 -u Me.miner -p x --nfmin 4 --nfmax 30 --starttime 1379622160
+
+NOTE: If all of your pools are for YACoin, you do not need to use these parameters.  However, if ANY pool
+is NOT YACoin, every pool must have them specified.
+NOTE: These settings will get written to the yacoin.conf if you save your settings that way!
+
+--nfmin XX (4 to 40, default: 4)
+The lowest N Factor used for this coin
+
+--nfmax XX (4 to 40, default: 30)
+The highest N Factor used for this coin
+
+--starttime XXXXXXXXXX (1 to 2147483647, default: 1367991200)
+The unix starttime for the coin.  This is usually published with a coin, but may
+need to be found in the source code.
+
+The following are some notable Scrypt-Chacha coins and the parameters to use to
+configure YACMiner to mine them - this is not a comprehensive list.
+
+Coin			NFMin	NFMax	Starttime
+YACoin			4	30	1367991200
+YBCoin			4	30	1372386273
+ZcCoin			4	30	1375817223
+Lottery Tickets		4	30	1379622160
+Velocity Coin & QQCoin	4	30	1387769316
+Microcoin		4	30	1389028879
+Ultracoin		4	30	1388361600
+
 
 Overclocking for scrypt mining:
 First of all, do not underclock your memory initially. Scrypt mining requires
