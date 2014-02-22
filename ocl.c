@@ -388,7 +388,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 	 * have otherwise created. The filename is:
 	 * name + kernelname +/- g(offset) + v + vectors + w + work_size + l + sizeof(long) + .bin
 	 * For scrypt the filename is:
-	 * name + kernelname + g + lg + lookup_gap + tc + thread_concurrency + bs + buffer_size + w + work_size + l + sizeof(long) + .bin
+	 * name + kernelname + g + lg + lookup_gap + tc + thread_concurrency + w + work_size + l + sizeof(long) + .bin
 	 */
 	char binaryfilename[255];
 	char filename[255];
@@ -491,24 +491,31 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 #ifdef USE_SCRYPT
 	if (opt_scrypt) {
 		if (!cgpu->opt_lg) {
-			applog(LOG_DEBUG, "GPU %d: selecting lookup gap of 2", gpu);
-			cgpu->lookup_gap = 2;
+			applog(LOG_NOTICE, "GPU %d: selecting lookup gap of 4", gpu);
+			cgpu->lookup_gap = 4;
 		} else
 			cgpu->lookup_gap = cgpu->opt_lg;
 
-		if (!cgpu->opt_tc) {
-			unsigned int sixtyfours;
+		size_t ipt = (1024 / cgpu->lookup_gap + (1024 % cgpu->lookup_gap > 0));
 
-			sixtyfours =  cgpu->max_alloc / 131072 / 64 - 1;
-			cgpu->thread_concurrency = sixtyfours * 64;
-			if (cgpu->shaders && cgpu->thread_concurrency > cgpu->shaders) {
-				cgpu->thread_concurrency -= cgpu->thread_concurrency % cgpu->shaders;
-				if (cgpu->thread_concurrency > cgpu->shaders * 5)
-					cgpu->thread_concurrency = cgpu->shaders * 5;
-			}
-			applog(LOG_DEBUG, "GPU %d: selecting thread concurrency of %d", gpu, (int)(cgpu->thread_concurrency));
+		if (!cgpu->opt_tc) {
+			unsigned int base_alloc;
+
+			// default to 88% of the available memory and find the closest MB value divisible by 8
+			base_alloc = (int)(cgpu->max_alloc * 88 / 100 / 1024 / 1024 / 8) * 8 * 1024 * 1024;
+			// base_alloc is now the number of bytes to allocate.  
+
+			cgpu->thread_concurrency = base_alloc / 128 / ipt;
+			applog(LOG_DEBUG,"88% Max Allocation: %d",base_alloc);
+			applog(LOG_NOTICE, "GPU %d: selecting thread concurrency of %d", gpu, (int)(cgpu->thread_concurrency));
 		} else
 			cgpu->thread_concurrency = cgpu->opt_tc;
+
+		if (cgpu->buffer_size) {
+			// use the buffer-size to overwrite the thread-concurrency
+			cgpu->thread_concurrency = (int)((cgpu->buffer_size * 1024 * 1024) / ipt / 128);
+			applog(LOG_DEBUG, "GPU %d: setting thread_concurrency to %d based on buffer size %d and lookup gap %d", gpu, (int)(cgpu->thread_concurrency),(int)(cgpu->buffer_size),(int)(cgpu->lookup_gap));
+		}
 	}
 #endif
 
@@ -541,11 +548,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 		strcat(binaryfilename, "g");
 	if (opt_scrypt) {
 #ifdef USE_SCRYPT
-		if (!cgpu->buffer_size) {
-			sprintf(numbuf, "lg%utc%ubs000", cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency);
-		} else {
-			sprintf(numbuf, "lg%utc%ubs%u", cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (unsigned int)cgpu->buffer_size);
-		}
+		sprintf(numbuf, "lg%utc%u", cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency);
 		strcat(binaryfilename, numbuf);
 #endif
 	} else {
@@ -617,8 +620,10 @@ build:
 
 #ifdef USE_SCRYPT
 	if (opt_scrypt)
+	{
 		sprintf(CompilerOptions, "-D LOOKUP_GAP=%d -D CONCURRENT_THREADS=%d -D WORKSIZE=%d",
 			cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)clState->wsize);
+	}
 	else
 #endif
 	{

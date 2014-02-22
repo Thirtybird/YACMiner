@@ -207,7 +207,7 @@ char *set_buffer_size(char *arg)
 	int i, val = 0, device = 0;
 	char *nextptr;
 
-	applog(LOG_NOTICE, "entering set_buffer_size");
+	applog(LOG_DEBUG, "entering set_buffer_size");
 
 	nextptr = strtok(arg, ",");
 	if (nextptr == NULL)
@@ -215,7 +215,7 @@ char *set_buffer_size(char *arg)
 	val = atoi(nextptr);
 
 	gpus[device++].buffer_size = val;
-	applog(LOG_NOTICE, "Buffer Size Set GPU %d: %d",device,val);
+	applog(LOG_DEBUG, "Buffer Size Set GPU %d: %d",device,val);
 
 	while ((nextptr = strtok(NULL, ",")) != NULL) {
 		val = atoi(nextptr);
