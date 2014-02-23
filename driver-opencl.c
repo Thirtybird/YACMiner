@@ -831,11 +831,6 @@ retry:
 		}
 #endif
 		wlog("Last initialised: %s\n", cgpu->init);
-		wlog("Intensity: ");
-		if (gpus[gpu].dynamic)
-			wlog("Dynamic (only one thread in use)\n");
-		else
-			wlog("%d\n", gpus[gpu].intensity);
 		for (i = 0; i < mining_threads; i++) {
 			thr = get_thread(i);
 			if (thr->cgpu != cgpu)
