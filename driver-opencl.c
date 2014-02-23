@@ -323,6 +323,7 @@ char *set_gpu_threads(char *arg)
 		return "Invalid value passed to set_gpu_threads";
 
 	gpus[device++].threads = val;
+	applog(LOG_NOTICE,"Setting GPU %d threads to %d",device,val);
 
 	while ((nextptr = strtok(NULL, ",")) != NULL) {
 		val = atoi(nextptr);
@@ -768,8 +769,10 @@ void manage_gpu(void)
 	char checkin[40];
 	char input;
 
-	if (!opt_g_threads)
+	if (!opt_g_threads) {
+		applog(LOG_ERR, "opt_g_threads not set in manage_gpu()");
 		return;
+	}
 
 	opt_loginput = true;
 	immedok(logwin, true);
@@ -1510,7 +1513,12 @@ static void opencl_detect()
 		cgpu->deven = DEV_ENABLED;
 		cgpu->drv = &opencl_drv;
 		cgpu->device_id = i;
+#ifndef HAVE_ADL
 		cgpu->threads = opt_g_threads;
+#else
+		if (cgpu->threads < 1)
+			cgpu->threads = 1;
+#endif
 		cgpu->virtual_gpu = i;
 		add_cgpu(cgpu);
 	}

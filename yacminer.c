@@ -805,11 +805,7 @@ static char *set_nfmin(const char *arg)
 
 	pool = pools[total_nfmin - 1];
 
-	printf ("value of i:%d\n",i);
-
 	char *err = set_int_range(arg, &i, MIN_NFACTOR, MAX_NFACTOR);
-
-	printf ("value of i:%d\n",i);
 
 	if (err)
 		return err;
@@ -817,14 +813,11 @@ static char *set_nfmin(const char *arg)
 	pool->sc_minn  = (int *)malloc(sizeof(int));
 	*pool->sc_minn = i;
 
-	printf ("value of pool->sc_minn:%d\n",*pool->sc_minn);
-
 	return NULL;
 }
 
 static char *set_nfmax(const char *arg)
 {
-	printf ("in set_nfmax");
 	struct pool *pool;
 	int i=sc_maxn;
 

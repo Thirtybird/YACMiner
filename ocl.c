@@ -502,12 +502,16 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 			unsigned int base_alloc;
 
 			// default to 88% of the available memory and find the closest MB value divisible by 8
-			base_alloc = (int)(cgpu->max_alloc * 88 / 100 / 1024 / 1024 / 8) * 8 * 1024 * 1024;
+			base_alloc = (int)(cgpu->max_alloc * 88 / 100 / 1024 / 1024 / 8) * 8 * 1024 * 1024 / cgpu->threads;
 			// base_alloc is now the number of bytes to allocate.  
+			// 2 threads of 336 MB did not fit into dedicated VRAM while 1 thread of 772MB did.  334 MB each did
+			// to be safe, reduce by 2MB per thread beyond the first
+
+			base_alloc -= (cgpu->threads - 1) * 2 * 1024 * 1024;
 
 			cgpu->thread_concurrency = base_alloc / 128 / ipt;
 			applog(LOG_DEBUG,"88% Max Allocation: %d",base_alloc);
-			applog(LOG_NOTICE, "GPU %d: selecting thread concurrency of %d", gpu, (int)(cgpu->thread_concurrency));
+			applog(LOG_NOTICE, "GPU %d: selecting thread concurrency of %d / %d", gpu, (int)(cgpu->thread_concurrency), cgpu->threads);
 		} else
 			cgpu->thread_concurrency = cgpu->opt_tc;
 
