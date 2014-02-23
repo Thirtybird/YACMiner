@@ -310,6 +310,35 @@ char *set_gpu_map(char *arg)
 	return NULL;
 }
 
+char *set_gpu_threads(char *arg)
+{
+	int i, val = 1, device = 0;
+	char *nextptr;
+
+	nextptr = strtok(arg, ",");
+	if (nextptr == NULL)
+		return "Invalid parameters for set_gpu_threads";
+	val = atoi(nextptr);
+	if (val < 1 || val > 10)
+		return "Invalid value passed to set_gpu_threads";
+
+	gpus[device++].threads = val;
+
+	while ((nextptr = strtok(NULL, ",")) != NULL) {
+		val = atoi(nextptr);
+		if (val < 1 || val > 10)
+			return "Invalid value passed to set_gpu_threads";
+
+		gpus[device++].threads = val;
+	}
+	if (device == 1) {
+		for (i = device; i < MAX_GPUDEVICES; i++)
+			gpus[i].threads = gpus[0].threads;
+	}
+
+	return NULL;
+}
+
 char *set_gpu_engine(char *arg)
 {
 	int i, val1 = 0, val2 = 0, device = 0;
