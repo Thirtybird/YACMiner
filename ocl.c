@@ -498,7 +498,8 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 
 		size_t ipt = (1024 / cgpu->lookup_gap + (1024 % cgpu->lookup_gap > 0));
 
-		if (!cgpu->opt_tc) {
+		// if we do not have TC and we do not have BS, then calculate some conservative numbers
+		if ((!cgpu->opt_tc) && (!cgpu->buffer_size)) {
 			unsigned int base_alloc;
 
 			// default to 88% of the available memory and find the closest MB value divisible by 8
@@ -510,8 +511,9 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 			base_alloc -= (cgpu->threads - 1) * 2 * 1024 * 1024;
 
 			cgpu->thread_concurrency = base_alloc / 128 / ipt;
+			cgpu->buffer_size = base_alloc / 1024 / 1024;
 			applog(LOG_DEBUG,"88%% Max Allocation: %u",base_alloc);
-			applog(LOG_NOTICE, "GPU %d: selecting thread concurrency of %d", gpu, (int)(cgpu->thread_concurrency));
+			applog(LOG_NOTICE, "GPU %d: selecting buffer_size of %zu", gpu, cgpu->buffer_size);
 		} else
 			cgpu->thread_concurrency = cgpu->opt_tc;
 

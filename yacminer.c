@@ -4207,10 +4207,23 @@ void write_config(FILE *fcfg)
 		for(i = 0; i < nDevs; i++)
 			fprintf(fcfg, "%s%d", i > 0 ? "," : "",
 				(int)gpus[i].opt_lg);
-		fputs("\",\n\"thread-concurrency\" : \"", fcfg);
-		for(i = 0; i < nDevs; i++)
-			fprintf(fcfg, "%s%d", i > 0 ? "," : "",
-				(int)gpus[i].opt_tc);
+
+		// check to see that we have devices, and if so, check the first one to see if bs is used
+		if ((nDevs > 0) && (gpus[0].buffer_size > 0))
+			{
+				fputs("\",\n\"buffer-size\" : \"", fcfg);
+				for(i = 0; i < nDevs; i++)
+					fprintf(fcfg, "%s%d", i > 0 ? "," : "",
+						(int)gpus[i].buffer_size);
+			}
+			else
+			{
+				fputs("\",\n\"thread-concurrency\" : \"", fcfg);
+				for(i = 0; i < nDevs; i++)
+					fprintf(fcfg, "%s%d", i > 0 ? "," : "",
+						(int)gpus[i].opt_tc);
+			}
+
 		fputs("\",\n\"shaders\" : \"", fcfg);
 		for(i = 0; i < nDevs; i++)
 			fprintf(fcfg, "%s%d", i > 0 ? "," : "",
