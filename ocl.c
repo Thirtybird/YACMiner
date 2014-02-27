@@ -510,7 +510,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 			base_alloc -= (cgpu->threads - 1) * 2 * 1024 * 1024;
 
 			cgpu->thread_concurrency = base_alloc / 128 / ipt;
-			applog(LOG_DEBUG,"88% Max Allocation: %d",base_alloc);
+			applog(LOG_DEBUG,"88% Max Allocation: %u",base_alloc);
 			applog(LOG_NOTICE, "GPU %d: selecting thread concurrency of %d / %d", gpu, (int)(cgpu->thread_concurrency), cgpu->threads);
 		} else
 			cgpu->thread_concurrency = cgpu->opt_tc;
@@ -827,7 +827,7 @@ built:
 		size_t bufsize = 128 * ipt * cgpu->thread_concurrency;
 
 		if (!cgpu->buffer_size) {
-			applog(LOG_NOTICE, "GPU %d: bufsize for thread @ %dMB based on TC of %d", gpu, (bufsize/1048576),(int)(cgpu->thread_concurrency));
+			applog(LOG_NOTICE, "GPU %d: bufsize for thread @ %dMB based on TC of %u", gpu, (bufsize/1048576),(cgpu->thread_concurrency));
 		} else {
 			applog(LOG_NOTICE, "GPU %d: bufsize for thread @ %dMB based on buffer-size", gpu, (int)(cgpu->buffer_size));
 			bufsize = (size_t)(cgpu->buffer_size)*(1048576);

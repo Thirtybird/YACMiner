@@ -4148,7 +4148,7 @@ void write_config(FILE *fcfg)
 		if (pools[i]->sc_maxn)
 			fprintf(fcfg, "\n\t\t\"nfmax\" : \"%d\",", *pools[i]->sc_maxn);
 		if (pools[i]->sc_starttime)
-			fprintf(fcfg, "\n\t\t\"starttime\" : \"%d\",", *pools[i]->sc_starttime);
+			fprintf(fcfg, "\n\t\t\"starttime\" : \"%ld\",", *pools[i]->sc_starttime);
 		fprintf(fcfg, "\n\t\t\"user\" : \"%s\",", json_escape(pools[i]->rpc_user));
 		fprintf(fcfg, "\n\t\t\"pass\" : \"%s\"\n\t}", json_escape(pools[i]->rpc_pass));
 		}
