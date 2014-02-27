@@ -109,7 +109,7 @@ int opt_dynamic_interval = 7;
 int opt_g_threads = -1;
 int gpu_threads;
 #ifdef USE_SCRYPT
-bool opt_scrypt;
+bool opt_scrypt=1;
 #endif
 #endif
 bool opt_restart = true;
@@ -3858,7 +3858,7 @@ static void set_blockdiff(const struct work *work)
 
 	previous_diff = current_diff;
 	diff64 = diffone / d64;
-	suffix_string(diff64, block_diff, 0);
+	suffix_string(diff64, block_diff, 4);
 	current_diff = (double)diffone / (double)d64;
 	suffix_string (previous_diff, cprev_diff, 0);
 	if (unlikely(strcmp(block_diff,cprev_diff) != 0))
