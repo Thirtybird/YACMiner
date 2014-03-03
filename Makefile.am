@@ -55,7 +55,7 @@ yacminer_SOURCES += adl.c adl.h adl_functions.h
 yacminer_SOURCES += *.cl
 
 if HAS_SCRYPT
-yacminer_SOURCES += scrypt.c scrypt.h
+yacminer_SOURCES += scrypt.c scrypt.h scrypt-jane.c scrypt-jane.h
 endif
 
 if NEED_FPGAUTILS

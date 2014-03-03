@@ -34,6 +34,11 @@
 #include "adl.h"
 #include "util.h"
 
+#ifdef USE_SCRYPT
+#include "scrypt-jane.h"
+#endif
+
+
 /* TODO: cleanup externals ********************/
 
 #ifdef HAVE_CURSES
@@ -245,6 +250,8 @@ static enum cl_kernels select_kernel(char *arg)
 #ifdef USE_SCRYPT
 	if (!strcmp(arg, "scrypt"))
 		return KL_SCRYPT;
+	if (!strcmp(arg, "scrypt-chacha"))
+		return KL_SCRYPT_CHACHA;
 #endif
 	return KL_NONE;
 }
@@ -1282,8 +1289,12 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 	int minn = sc_minn;
 	int maxn = sc_maxn;
 	long starttime = sc_starttime;
-        
-        unsigned int timestamp = bswap_32(*((unsigned int *)(blk->work->data + 17*4)));
+	cl_uint nfactor;
+	
+	unsigned int timestamp = bswap_32(*((unsigned int *)(blk->work->data + 17*4)));
+
+	if (opt_scrypt_chacha)
+	{
 		// set the global variable for use in the hashmeter
 //		printf("about to print sc_minn");
 		if (blk->work->pool->sc_minn)
@@ -1304,18 +1315,24 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 		//sc_currentn = GetNfactor(timestamp);
 		blk->work->pool->sc_lastnfactor = GetNfactor(timestamp, minn, maxn, starttime);
 		sc_currentn = blk->work->pool->sc_lastnfactor;
-        cl_uint nfactor = blk->work->pool->sc_lastnfactor;
+        nfactor = blk->work->pool->sc_lastnfactor;
+    
+		nfactor = (1 << (nfactor + 1));
+	}
 
-        
-	nfactor = (1 << (nfactor + 1));
-        
+	
 	le_target = *(cl_uint *)(blk->work->device_target + 28);
-        
-	applog(LOG_DEBUG, "Timestamp: %d, Nfactor: %d, Target: %x", timestamp, nfactor, le_target);
 
-	be32enc_vect(data, (const uint32_t *)blk->work->data, 19);
+
+
+	if (!opt_scrypt_chacha) {
+		clState->cldata = blk->work->data;
+	} else {
+		applog(LOG_DEBUG, "Timestamp: %d, Nfactor: %d, Target: %x", timestamp, nfactor, le_target);
+		sj_be32enc_vect(data, (const uint32_t *)blk->work->data, 19);
+		clState->cldata = data;
+	}
         
-	clState->cldata = data;
 	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL,NULL);
 
 	CL_SET_ARG(clState->CLbuffer0);
@@ -1324,7 +1341,8 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 	CL_SET_VARG(4, &midstate[0]);
 	CL_SET_VARG(4, &midstate[16]);
 	CL_SET_ARG(le_target);
-	CL_SET_ARG(nfactor);
+	if (opt_scrypt_chacha)
+		CL_SET_ARG(nfactor);
 
 	return status;
 }
@@ -1635,6 +1653,9 @@ static bool opencl_thread_prepare(struct thr_info *thr)
 			case KL_SCRYPT:
 				cgpu->kname = "scrypt";
 				break;
+			case KL_SCRYPT_CHACHA:
+				cgpu->kname = "scrypt-chacha";
+				break;
 #endif
 			case KL_POCLBM:
 				cgpu->kname = "poclbm";
@@ -1680,6 +1701,7 @@ static bool opencl_thread_init(struct thr_info *thr)
 			break;
 #ifdef USE_SCRYPT
 		case KL_SCRYPT:
+		case KL_SCRYPT_CHACHA:
 			thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
 			break;
 #endif
@@ -1774,7 +1796,8 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 		size_t global_work_offset[1];
 
 		global_work_offset[0] = work->blk.nonce;
-                applog(LOG_DEBUG, "Nonce: %x, Global work size: %x, local work size: %x", work->blk.nonce, (unsigned)globalThreads[0], (unsigned)localThreads[0]);
+		if (opt_scrypt_chacha)
+			applog(LOG_DEBUG, "Nonce: %x, Global work size: %x, local work size: %x", work->blk.nonce, (unsigned)globalThreads[0], (unsigned)localThreads[0]);
 		status = clEnqueueNDRangeKernel(clState->commandQueue, *kernel, 1, global_work_offset,
 						globalThreads, localThreads, 0,  NULL, NULL);
 	} else
@@ -1792,10 +1815,13 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 		return -1;
 	}
 
-        uint32_t *o = thrdata->res;
-        uint32_t target = *(uint32_t *)(work->target + 28);
-	applog(LOG_DEBUG, "Nonce: %x, Output buffer: %x %x %x %x %x %x %x %x Target: %x", work->blk.nonce, o[0], o[1], o[2], o[3], o[4], o[5], o[6], o[7], target);
-        
+	if (opt_scrypt_chacha)
+	{
+		uint32_t *o = thrdata->res;
+		uint32_t target = *(uint32_t *)(work->target + 28);
+		applog(LOG_DEBUG, "Nonce: %x, Output buffer: %x %x %x %x %x %x %x %x Target: %x", work->blk.nonce, o[0], o[1], o[2], o[3], o[4], o[5], o[6], o[7], target);
+	}
+	
 	/* The amount of work scanned can fluctuate when intensity changes
 	 * and since we do this one cycle behind, we increment the work more
 	 * than enough to prevent repeating work */

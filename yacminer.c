@@ -51,6 +51,7 @@
 #include "driver-opencl.h"
 #include "bench_block.h"
 #include "scrypt.h"
+#include "scrypt-jane.h"
 
 #ifdef USE_AVALON
 #include "driver-avalon.h"
@@ -110,6 +111,7 @@ int opt_g_threads = -1;
 int gpu_threads;
 #ifdef USE_SCRYPT
 bool opt_scrypt=1;
+bool opt_scrypt_chacha=0;
 #endif
 #endif
 bool opt_restart = true;
@@ -1311,7 +1313,10 @@ static struct opt_table opt_config_table[] = {
 #ifdef USE_SCRYPT
 	OPT_WITHOUT_ARG("--scrypt",
 			opt_set_bool, &opt_scrypt,
-			"Use the scrypt algorithm for mining (litecoin only)"),
+			"Use the scrypt algorithm for mining"),
+	OPT_WITHOUT_ARG("--scrypt-chacha",
+			opt_set_bool, &opt_scrypt_chacha,
+			"Use the scrypt-chacha algorithm for mining(default)"),
 	OPT_WITH_ARG("--shaders",
 		     set_shaders, NULL, NULL,
 		     "GPU shaders per card for tuning scrypt, comma separated"),
@@ -3505,7 +3510,12 @@ static void regen_hash(struct work *work)
 static void rebuild_hash(struct work *work)
 {
 	if (opt_scrypt)
-		scrypt_regenhash(work);
+		if (opt_scrypt_chacha) 
+		{
+			sc_scrypt_regenhash(work);
+		} else {
+			scrypt_regenhash(work);
+		}
 	else
 		regen_hash(work);
 
@@ -4199,6 +4209,9 @@ void write_config(FILE *fcfg)
 					break;
 				case KL_SCRYPT:
 					fprintf(fcfg, "scrypt");
+					break;
+				case KL_SCRYPT_CHACHA:
+					fprintf(fcfg, "scrypt-chacha");
 					break;
 			}
 		}
@@ -5924,7 +5937,10 @@ bool submit_nonce(struct thr_info *thr, struct work *work, uint32_t nonce)
 	bool ret = true;
 
 	cgtime(&tv_work_found);
-	*work_nonce = htobe32(nonce);
+	if (opt_scrypt_chacha)
+		*work_nonce = htobe32(nonce);
+	else
+		*work_nonce = htole32(nonce);
 
 	mutex_lock(&stats_lock);
 	total_diff1 += work->device_diff;
@@ -7730,6 +7746,9 @@ int main(int argc, char *argv[])
 
 	if (!config_loaded)
 		load_default_config();
+
+	if (opt_scrypt_chacha)
+		opt_set_bool(&opt_scrypt);
 
 	if (opt_benchmark) {
 		struct pool *pool;

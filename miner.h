@@ -369,6 +369,7 @@ enum cl_kernels {
 	KL_DIAKGCN,
 	KL_DIABLO,
 	KL_SCRYPT,
+	KL_SCRYPT_CHACHA,
 };
 
 enum dev_reason {
@@ -996,8 +997,10 @@ extern struct cgpu_info gpus[MAX_GPUDEVICES];
 extern int gpu_threads;
 #ifdef USE_SCRYPT
 extern bool opt_scrypt;
+extern bool opt_scrypt_chacha;
 #else
 #define opt_scrypt (0)
+#define opt_scrypt_chacha (0)
 #endif
 extern double total_secs;
 extern int mining_threads;

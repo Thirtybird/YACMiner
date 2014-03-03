@@ -407,7 +407,8 @@ AC_DEFINE_UNQUOTED([PHATK_KERNNAME], ["phatk121016"], [Filename for phatk kernel
 AC_DEFINE_UNQUOTED([POCLBM_KERNNAME], ["poclbm130302"], [Filename for poclbm kernel])
 AC_DEFINE_UNQUOTED([DIAKGCN_KERNNAME], ["diakgcn121016"], [Filename for diakgcn kernel])
 AC_DEFINE_UNQUOTED([DIABLO_KERNNAME], ["diablo130302"], [Filename for diablo kernel])
-AC_DEFINE_UNQUOTED([SCRYPT_KERNNAME], ["scrypt-chacha"], [Filename for scrypt kernel])
+AC_DEFINE_UNQUOTED([SCRYPT_KERNNAME], ["scrypt130511"], [Filename for scrypt kernel])
+AC_DEFINE_UNQUOTED([SCRYPT_CHACHA_KERNNAME], ["scrypt-chacha"], [Filename for scrypt-chacha kernel])
 
 
 AC_SUBST(OPENCL_LIBS)
