@@ -4952,11 +4952,11 @@ static void hashmeter(int thr_id, struct timeval *diff,
 	suffix_string(dr64, displayed_rolling, 4);
 
 //	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  U:%.2f/m  WU:%.1f/m  FB:%d",
-	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%.0f  R:%d  HW:%d  U:%.2f/m  NF:%d  FB:%d",
+	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%.0f  R:%d  HW:%d  U:%.2f/m  WU:%.1f/m  FB:%d",
 		want_per_device_stats ? "ALL " : "",
 		opt_log_interval, displayed_rolling, displayed_hashes,
 		total_diff_accepted, total_rejected, hw_errors, utility,
-		sc_currentn, found_blocks);
+		total_diff1 / total_secs * 60, found_blocks);
 
 	local_mhashes_done = 0;
 out_unlock:
