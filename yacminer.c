@@ -2230,6 +2230,7 @@ static void text_print_status(int thr_id)
 static void curses_print_status(void)
 {
 	struct pool *pool = current_pool();
+	char sNF[10] ="";
 
 	wattron(statuswin, A_BOLD);
 	mvwprintw(statuswin, 0, 0, " " PACKAGE " version " VERSION " - Started: %s", datestamp);
@@ -2241,15 +2242,17 @@ static void curses_print_status(void)
 		total_staged(), total_stale, new_blocks,
 		local_work, total_go, total_ro);
 	wclrtoeol(statuswin);
+	if (opt_scrypt_chacha)
+		sprintf(sNF,"NF %d ",pool->sc_lastnfactor);
 	if ((pool_strategy == POOL_LOADBALANCE  || pool_strategy == POOL_BALANCE) && total_pools > 1) {
 		mvwprintw(statuswin, 4, 0, " Connected to multiple pools with%s LP",
 			have_longpoll ? "": "out");
 	} else if (pool->has_stratum) {
-		mvwprintw(statuswin, 4, 0, " Connected to %s diff %s NF %d with stratum as user %s",
-			pool->sockaddr_url, pool->diff, pool->sc_lastnfactor, pool->rpc_user);
+		mvwprintw(statuswin, 4, 0, " Connected to %s diff %s %swith stratum as user %s",
+			pool->sockaddr_url, pool->diff, sNF, pool->rpc_user);
 	} else {
-		mvwprintw(statuswin, 4, 0, " Connected to %s diff %s NF %d with%s %s as user %s",
-			pool->sockaddr_url, pool->diff, pool->sc_lastnfactor, have_longpoll ? "": "out",
+		mvwprintw(statuswin, 4, 0, " Connected to %s diff %s $swith%s %s as user %s",
+			pool->sockaddr_url, pool->diff, sNF, have_longpoll ? "": "out",
 			pool->has_gbt ? "GBT" : "LP", pool->rpc_user);
 	}
 	wclrtoeol(statuswin);
@@ -4952,7 +4955,7 @@ static void hashmeter(int thr_id, struct timeval *diff,
 	suffix_string(dr64, displayed_rolling, 4);
 
 //	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  U:%.2f/m  WU:%.1f/m  FB:%d",
-	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%.0f  R:%d  HW:%d  U:%.2f/m  WU:%.1f/m  FB:%d",
+	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%.0f  R:%d  HW:%d  U:%.2f/m  WU:%.2f/m  FB:%d",
 		want_per_device_stats ? "ALL " : "",
 		opt_log_interval, displayed_rolling, displayed_hashes,
 		total_diff_accepted, total_rejected, hw_errors, utility,
