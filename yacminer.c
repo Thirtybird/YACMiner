@@ -2202,12 +2202,12 @@ static void get_statline(char *buf, struct cgpu_info *cgpu)
 
 	sprintf(buf, "%s%d ", cgpu->drv->name, cgpu->device_id);
 	cgpu->drv->get_statline_before(buf, cgpu);
-	tailsprintf(buf, "(%ds):%s (avg):%sh/s | A:%.0f R:%.0f HW:%d U:%.1f/m",
+	tailsprintf(buf, "(%ds):%s (avg):%sh/s | A:%.0f R:%d HW:%d U:%.1f/m",
 		opt_log_interval,
 		displayed_rolling,
 		displayed_hashes,
 		cgpu->diff_accepted,
-		cgpu->diff_rejected,
+		cgpu->rejected,
 		cgpu->hw_errors,
 		cgpu->utility);
 	cgpu->drv->get_statline(buf, cgpu);
@@ -2332,14 +2332,14 @@ static void curses_print_devstatus(struct cgpu_info *cgpu, int count)
 	else
 		wprintw(statuswin, "%6s", displayed_rolling);
 	adj_fwidth(cgpu->diff_accepted, &dawidth);
-	adj_fwidth(cgpu->diff_rejected, &drwidth);
+	adj_width(cgpu->rejected, &drwidth);
 	adj_width(cgpu->hw_errors, &hwwidth);
 	adj_width(cgpu->utility, &uwidth);
 
-	wprintw(statuswin, "/%6sh/s | A:%*.0f R:%*.0f HW:%*d U:%*.2f/m",
+	wprintw(statuswin, "/%6sh/s | A:%*.0f R:%*d HW:%*d U:%*.2f/m",
 			displayed_hashes,
 			dawidth, cgpu->diff_accepted,
-			drwidth, cgpu->diff_rejected,
+			drwidth, cgpu->rejected,
 			hwwidth, cgpu->hw_errors,
 		uwidth + 3, cgpu->utility);
 
@@ -3868,9 +3868,9 @@ static void set_blockdiff(const struct work *work)
 
 	previous_diff = current_diff;
 	diff64 = diffone / d64;
-	suffix_string(diff64, block_diff, 4);
+	suffix_string(diff64, block_diff, 0);
 	current_diff = (double)diffone / (double)d64;
-	suffix_string (previous_diff, cprev_diff, 4);
+	suffix_string (previous_diff, cprev_diff, 0);
 	if (unlikely(strcmp(block_diff,cprev_diff) != 0))
 		applog(LOG_NOTICE, "Network diff set to %s", block_diff);
 }
@@ -4952,10 +4952,10 @@ static void hashmeter(int thr_id, struct timeval *diff,
 	suffix_string(dr64, displayed_rolling, 4);
 
 //	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  U:%.2f/m  WU:%.1f/m  FB:%d",
-	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  U:%.2f/m  NF:%d  FB:%d",
+	sprintf(statusline, "%s(%ds):%s (avg):%sh/s | A:%.0f  R:%d  HW:%d  U:%.2f/m  NF:%d  FB:%d",
 		want_per_device_stats ? "ALL " : "",
 		opt_log_interval, displayed_rolling, displayed_hashes,
-		total_diff_accepted, total_diff_rejected, hw_errors, utility,
+		total_diff_accepted, total_rejected, hw_errors, utility,
 		sc_currentn, found_blocks);
 
 	local_mhashes_done = 0;
