@@ -1289,11 +1289,12 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 	int minn = sc_minn;
 	int maxn = sc_maxn;
 	long starttime = sc_starttime;
-	cl_uint nfactor;
-	
+	cl_uint nfactor=10;
+	cl_uint N;
+
 	unsigned int timestamp = bswap_32(*((unsigned int *)(blk->work->data + 17*4)));
 
-	if (opt_scrypt_chacha)
+	if (opt_scrypt_chacha || opt_n_scrypt)
 	{
 		// set the global variable for use in the hashmeter
 //		printf("about to print sc_minn");
@@ -1315,15 +1316,12 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 		//sc_currentn = GetNfactor(timestamp);
 		blk->work->pool->sc_lastnfactor = GetNfactor(timestamp, minn, maxn, starttime);
 		sc_currentn = blk->work->pool->sc_lastnfactor;
-        nfactor = blk->work->pool->sc_lastnfactor;
+        nfactor = blk->work->pool->sc_lastnfactor +1;
     
-		nfactor = (1 << (nfactor + 1));
+		N = (1 << nfactor);
 	}
 
-	
 	le_target = *(cl_uint *)(blk->work->device_target + 28);
-
-
 
 	if (!opt_scrypt_chacha) {
 		clState->cldata = blk->work->data;
@@ -1342,6 +1340,8 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 	CL_SET_VARG(4, &midstate[16]);
 	CL_SET_ARG(le_target);
 	if (opt_scrypt_chacha)
+		CL_SET_ARG(N);
+	else
 		CL_SET_ARG(nfactor);
 
 	return status;

@@ -112,6 +112,7 @@ int gpu_threads;
 #ifdef USE_SCRYPT
 bool opt_scrypt=1;
 bool opt_scrypt_chacha=0;
+bool opt_n_scrypt=0;
 #endif
 #endif
 bool opt_restart = true;
@@ -1017,7 +1018,7 @@ static char *set_null(const char __maybe_unused *arg)
 	return NULL;
 }
 
-unsigned char GetNfactor(unsigned int nTimestamp, int minn, int maxn, long starttime) {
+unsigned char Get_SC_Nfactor(unsigned int nTimestamp, int minn, int maxn, long starttime) {
     int l = 0;
 
     if (nTimestamp <= starttime)
@@ -1046,6 +1047,50 @@ unsigned char GetNfactor(unsigned int nTimestamp, int minn, int maxn, long start
     if(N<minn) return minn;
     if(N>maxn) return maxn;
     return N;
+}
+
+unsigned char Get_SN_Nfactor(unsigned int nTimestamp, int minn, int maxn, long starttime) {
+    int l = 0;
+
+    if (nTimestamp <= starttime)
+	{
+//		printf("Get_SN_Nfacotr timestamp <= starttime");
+        return minn;
+	}
+
+    unsigned long int s = nTimestamp - starttime;
+    while ((s >> 1) > 3) {
+      l += 1;
+      s >>= 1;
+    }
+
+    s &= 3;
+
+    int n = (l * 158 + s * 28 - 2670) / 100;
+
+    if (n < 0) 
+		n = 0;
+
+    if (n > 255)
+        printf("GetNfactor(%d) - something wrong(n == %d)\n", nTimestamp, n);
+
+    unsigned char N = (unsigned char)n;
+    //printf("GetNfactor: %d -> %d %d : %d / %d\n", nTimestamp - nChainStartTime, l, s, n, min(max(N, minNfactor), maxNfactor));
+
+//    return min(max(N, minNfactor), maxNfactor);
+
+    if(N<minn) return minn;
+    if(N>maxn) return maxn;
+    return N;
+}
+
+unsigned char GetNfactor(unsigned int nTimestamp, int minn, int maxn, long starttime) {
+	if (opt_scrypt_chacha)
+		return Get_SC_Nfactor (nTimestamp, minn, maxn, starttime);
+	else if (opt_n_scrypt)
+		return Get_SN_Nfactor (nTimestamp, minn, maxn, starttime);
+	else
+		return 10;
 }
 
 /* These options are available from config file or commandline */
@@ -1263,6 +1308,11 @@ static struct opt_table opt_config_table[] = {
 	OPT_WITHOUT_ARG("--no-submit-stale",
 			opt_set_invbool, &opt_submit_stale,
 		        "Don't submit shares if they are detected as stale"),
+#ifdef USE_SCRYPT
+	OPT_WITHOUT_ARG("--nscrypt",
+			opt_set_bool, &opt_n_scrypt,
+			"Use the adaptive N-Factor scrypt algorithm for mining"),
+#endif
 	OPT_WITH_ARG("--pass|-p",
 		     set_pass, NULL, NULL,
 		     "Password for bitcoin JSON-RPC server"),
@@ -1316,7 +1366,7 @@ static struct opt_table opt_config_table[] = {
 			"Use the scrypt algorithm for mining"),
 	OPT_WITHOUT_ARG("--scrypt-chacha",
 			opt_set_bool, &opt_scrypt_chacha,
-			"Use the scrypt-chacha algorithm for mining(default)"),
+			"Use the scrypt-chacha algorithm for mining (aka scrypt-jane)"),
 	OPT_WITH_ARG("--shaders",
 		     set_shaders, NULL, NULL,
 		     "GPU shaders per card for tuning scrypt, comma separated"),
@@ -2242,7 +2292,7 @@ static void curses_print_status(void)
 		total_staged(), total_stale, new_blocks,
 		local_work, total_go, total_ro);
 	wclrtoeol(statuswin);
-	if (opt_scrypt_chacha)
+	if (opt_scrypt_chacha || opt_n_scrypt)
 		sprintf(sNF,"NF %d ",pool->sc_lastnfactor);
 	if ((pool_strategy == POOL_LOADBALANCE  || pool_strategy == POOL_BALANCE) && total_pools > 1) {
 		mvwprintw(statuswin, 4, 0, " Connected to multiple pools with%s LP",
@@ -2251,7 +2301,7 @@ static void curses_print_status(void)
 		mvwprintw(statuswin, 4, 0, " Connected to %s diff %s %swith stratum as user %s",
 			pool->sockaddr_url, pool->diff, sNF, pool->rpc_user);
 	} else {
-		mvwprintw(statuswin, 4, 0, " Connected to %s diff %s $swith%s %s as user %s",
+		mvwprintw(statuswin, 4, 0, " Connected to %s diff %s %swith%s %s as user %s",
 			pool->sockaddr_url, pool->diff, sNF, have_longpoll ? "": "out",
 			pool->has_gbt ? "GBT" : "LP", pool->rpc_user);
 	}
@@ -7751,7 +7801,16 @@ int main(int argc, char *argv[])
 		load_default_config();
 
 	if (opt_scrypt_chacha)
+	{
 		opt_set_bool(&opt_scrypt);
+		opt_set_invbool(&opt_n_scrypt);
+	}
+
+	if (opt_n_scrypt)
+	{
+		opt_set_bool(&opt_scrypt);
+		opt_set_invbool(&opt_scrypt_chacha);
+	}
 
 	if (opt_benchmark) {
 		struct pool *pool;

@@ -508,7 +508,8 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 		} else
 			cgpu->lookup_gap = cgpu->opt_lg;
 
-		size_t ipt = (1024 / cgpu->lookup_gap + (1024 % cgpu->lookup_gap > 0));
+		unsigned int bsize = opt_n_scrypt ? 2048 : 1024;
+		size_t ipt = (bsize / cgpu->lookup_gap + (bsize % cgpu->lookup_gap > 0));
 
 		// if we do not have TC and we do not have BS, then calculate some conservative numbers
 		if ((!cgpu->opt_tc) && (!cgpu->buffer_size)) {
@@ -837,7 +838,8 @@ built:
 #ifdef USE_SCRYPT
 	if (opt_scrypt) {
 
-		size_t ipt = (1024 / cgpu->lookup_gap + (1024 % cgpu->lookup_gap > 0));
+		unsigned int bsize = opt_n_scrypt ? 2048 : 1024;
+		size_t ipt = (bsize / cgpu->lookup_gap + (bsize % cgpu->lookup_gap > 0));
 		size_t bufsize = 128 * ipt * cgpu->thread_concurrency;
 
 		if (!cgpu->buffer_size) {

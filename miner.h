@@ -998,6 +998,7 @@ extern int gpu_threads;
 #ifdef USE_SCRYPT
 extern bool opt_scrypt;
 extern bool opt_scrypt_chacha;
+extern bool opt_n_scrypt;
 #else
 #define opt_scrypt (0)
 #define opt_scrypt_chacha (0)
