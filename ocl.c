@@ -404,6 +404,9 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 			if (opt_scrypt_chacha) {
 				applog(LOG_INFO, "Selecting scrypt-chacha kernel");
 				clState->chosen_kernel = KL_SCRYPT_CHACHA;
+			} else if (opt_n_scrypt) {
+				applog(LOG_INFO, "Selecting N-scrypt kernel");
+				clState->chosen_kernel = KL_N_SCRYPT;
 			} else {
 				applog(LOG_INFO, "Selecting standard scrypt kernel");
 				clState->chosen_kernel = KL_SCRYPT;
@@ -468,6 +471,12 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 		case KL_SCRYPT:
 			strcpy(filename, SCRYPT_KERNNAME".cl");
 			strcpy(binaryfilename, SCRYPT_KERNNAME);
+			/* Scrypt only supports vector 1 */
+			cgpu->vwidth = 1;
+			break;
+		case KL_N_SCRYPT:
+			strcpy(filename, N_SCRYPT_KERNNAME".cl");
+			strcpy(binaryfilename, N_SCRYPT_KERNNAME);
 			/* Scrypt only supports vector 1 */
 			cgpu->vwidth = 1;
 			break;
@@ -705,7 +714,7 @@ build:
 		applog(LOG_ERR, "%s", log);
 		return NULL;
 	} else {
-		applog(LOG_ERR, "Success: Building Program (clBuildProgram)");
+		applog(LOG_DEBUG, "Success: Building Program (clBuildProgram)");
 	}
 
 	prog_built = true;

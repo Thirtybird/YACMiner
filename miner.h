@@ -369,6 +369,7 @@ enum cl_kernels {
 	KL_DIAKGCN,
 	KL_DIABLO,
 	KL_SCRYPT,
+	KL_N_SCRYPT,
 	KL_SCRYPT_CHACHA,
 };
 

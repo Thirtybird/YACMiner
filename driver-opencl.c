@@ -250,6 +250,8 @@ static enum cl_kernels select_kernel(char *arg)
 #ifdef USE_SCRYPT
 	if (!strcmp(arg, "scrypt"))
 		return KL_SCRYPT;
+	if (!strcmp(arg, "nscrypt"))
+		return KL_N_SCRYPT;
 	if (!strcmp(arg, "scrypt-chacha"))
 		return KL_SCRYPT_CHACHA;
 #endif
@@ -1339,9 +1341,13 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 	CL_SET_VARG(4, &midstate[0]);
 	CL_SET_VARG(4, &midstate[16]);
 	CL_SET_ARG(le_target);
-	if (opt_scrypt_chacha)
+
+	// If using the Scrypt-Chacha kernel, pass in N
+	if (clState->chosen_kernel == KL_SCRYPT_CHACHA)
 		CL_SET_ARG(N);
-	else
+
+	// If using the N Scrypt kernel, pass in NFactor
+	if (clState->chosen_kernel == KL_N_SCRYPT)
 		CL_SET_ARG(nfactor);
 
 	return status;
@@ -1653,6 +1659,9 @@ static bool opencl_thread_prepare(struct thr_info *thr)
 			case KL_SCRYPT:
 				cgpu->kname = "scrypt";
 				break;
+			case KL_N_SCRYPT:
+				cgpu->kname = "nscrypt";
+				break;
 			case KL_SCRYPT_CHACHA:
 				cgpu->kname = "scrypt-chacha";
 				break;
@@ -1701,6 +1710,7 @@ static bool opencl_thread_init(struct thr_info *thr)
 			break;
 #ifdef USE_SCRYPT
 		case KL_SCRYPT:
+		case KL_N_SCRYPT:
 		case KL_SCRYPT_CHACHA:
 			thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
 			break;
