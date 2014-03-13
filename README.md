@@ -142,7 +142,10 @@ Options for both config file and command line:
 	--lowmem            Minimise caching of shares for low memory applications
 	--monitor|-m <arg>  Use custom pipe cmd for output messages
 	--net-delay         Impose small delays in networking to not overload slow routers
+	--nfmin <arg>       Set min N factor for mining scrypt-chacha coins (4 to 40)
+	--nfmax <arg>       Set max N factor for mining scrypt-chacha coins (4 to 40)
 	--no-submit-stale   Don't submit shares if they are detected as stale
+	--nscrypt           Use the adaptive N-Factor scrypt algorithm for mining
 	--pass|-p <arg>     Password for bitcoin JSON-RPC server
 	--per-device-stats  Force verbose mode and output per-device statistics
 	--protocol-dump|-P  Verbose dump of protocol-level activities
@@ -155,7 +158,8 @@ Options for both config file and command line:
 	--scan-time|-s <arg> Upper bound on time spent scanning current work, in seconds (default: 60)
 	--sched-start <arg> Set a time of day in HH:MM to start mining (a once off without a stop time)
 	--sched-stop <arg>  Set a time of day in HH:MM to stop mining (will quit without a start time)
-	--scrypt            Use the scrypt-chache algorithm for mining (YACoin)
+	--scrypt            Use the scrypt algorithm for mining
+	--scrypt-chacha     Use the scrypt-chacha algorithm for mining (aka scrypt-jane)
 	--sharelog <arg>    Append share log to file
 	--shares <arg>      Quit after mining N shares (default: unlimited)
 	--socks-proxy <arg> Set socks4 proxy (host:port) for all pools without a proxy specified
@@ -176,9 +180,8 @@ Options for both config file and command line:
 
 	--auto-fan          Automatically adjust all GPU fan speeds to maintain a target temperature
 	--auto-gpu          Automatically adjust all GPU engine clock speeds to maintain a target temperature
-	--buffer-size       Set OpenCL Buffer size in MB for scrypt mining, comma separated
+	--buffer-size|-B <arg> Set OpenCL Buffer size in MB for scrypt mining, comma separated
 	--disable-gpu|-G    Disable GPU mining even if suitable devices exist
-	--gpu-threads|-g <arg> Number of threads per GPU (1 - 10) (default: 2)
 	--gpu-dyninterval <arg> Set the refresh interval in ms for GPUs using dynamic intensity (default: 7)
 	--gpu-engine <arg>  GPU engine (over)clock range in Mhz - one value, range and/or comma separated list (e.g. 850-900,900,750-850)
 	--gpu-fan <arg>     GPU fan percentage range - one value, range and/or comma separated list (e.g. 25-85,85,65)
@@ -187,6 +190,7 @@ Options for both config file and command line:
 	--gpu-memdiff <arg> Set a fixed difference in clock speed between the GPU and memory in auto-gpu mode
 	--gpu-powertune <arg> Set the GPU powertune percentage - one value for all or separate by commas for per card.
 	--gpu-reorder       Attempt to reorder GPU devices according to PCI Bus ID
+	--gpu-threads|-g <arg> Number of threads per GPU - one value or comma separated list (e.g. 1,2,1)
 	--gpu-vddc <arg>    Set the GPU voltage in Volts - one value for all or separate by commas for per card.
 	--intensity|-I <arg> Intensity of GPU scanning (d or -10 -> 20, default: d to maintain desktop interactivity)
 	--lookup-gap <arg>  Set GPU lookup gap, comma separated
@@ -205,7 +209,7 @@ Options for both config file and command line:
 
 See GPU-README for more information regarding GPU mining.
 
-See SCRYPT-README for more information regarding YACoin mining.
+See SCRYPT-README for more information regarding Scrypt-Chacha mining.
 
 ## While Running
 
@@ -440,7 +444,8 @@ For RPC API details see the API-README file
 	the same time?
 	A: No, yacminer keeps a database of the block it's working on to ensure it does
 	not work on stale blocks, and having different blocks from two networks would
-	make it invalidate the work from each other.
+	make it invalidate the work from each other.  You can have a failover pool that
+	mines a different coin though if you desire.
 
 	Q: Can I configure YACMiner to mine with different login credentials or pools
 	for each separate device?
@@ -573,5 +578,6 @@ This code is provided entirely free of charge by the programmer in his spare
 time so donations would be greatly appreciated. Please consider donating to the
 address below.
 
-	Thirtybird
-	Y4FKiwKKYGQzcqn3M3u6mJoded6ri1UWHa
+Thirtybird
+BTC: 183eSsaxG9y6m2ZhrDhHueoKnZWmbm6jfC
+YAC: Y4FKiwKKYGQzcqn3M3u6mJoded6ri1UWHa

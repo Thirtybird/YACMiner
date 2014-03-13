@@ -1,19 +1,30 @@
+# Scrypt & N-Scrypt
+
+While the main purpose of YACMiner is to mine Scrypt-Chacha based coins, the 
+ability to mine scrypt and N-Scrypt based coins has been added to this miner.
+This document will deal mainly with scrypt-chacha, most of which applies to
+N-Scrypt as well.  Standard Scrypt will not be discussed as there are numerous
+resources already dedicated to this topic.
+
 # Scrypt-chacha
 
-Scrypt-chacha mining, AKA YACoin mining, for GPU is completely different to sha256
-used for bitcoin mining. The algorithm was originally developed in a manner
-that it was anticipated would make it suitable for mining on CPU but NOT GPU.
-Thanks to some innovative work by Artforz and mtrlt, this was proven to be
-wrong. However, it has very different requirements to bitcoin mining and is a
-lot more complicated to get working well. Note that it is a ram dependent
-workload, and requires you to have enough system ram as well as fast enough
-GPU ram. If you have less system ram than your GPU has, it may not be possible
-to mine at any reasonable rate.
+Scrypt-chacha mining, AKA YACoin AKA scrypt-jane mining, for GPU is completely 
+different to sha256 used for bitcoin mining, or even normal scrypt mining. 
+The algorithm was originally developed in a manner that it was anticipated 
+would make it suitable for mining on CPU but NOT GPU.  Thanks to some 
+innovative work by Artforz and mtrlt, this was proven to be wrong. However, 
+it has very different requirements to bitcoin mining and is a lot more 
+complicated to get working well. Note that it is a ram dependent workload, and 
+requires you to have enough system ram as well as fast enough GPU ram. If you
+have less system ram than your GPU has, it may not be possible to mine at any 
+reasonable rate.
 
-There are 5 main parameters to tuning scrypt, all of which are optional for
-further fine tuning. When you start scrypt mining with the --scrypt option,
-yacminer will fail IN RANDOM WAYS. They are all due to parameters being outside
-what the GPU can cope with.
+There are 4 main parameters to tuning scrypt-chacha, all of which are optional
+for further fine tuning. When you start scrypt-chacha mining with the 
+--scrypt-chacha option, yacminer will do its best to try and set values for
+the mandatory fields.  This is less than optimal, and you are likely to
+have sub-optimal performance, HW errors, or possibly even crash your computer.
+They are all due to parameters being outside what the GPU can cope with.
 
 NOTE that if it does not fail at startup, the presence of hardware errors (HW)
 are a sure sign that you have set the parameters too high.
@@ -42,35 +53,39 @@ lines are in the .bat before starting YACMiner:
 	setx GPU_MAX_ALLOC_PERCENT 100
 	setx GPU_USE_SYNC_OBJECTS 1
 
---thread-concurrency:
-Absolutely set this.  This adjusts the size of the OpenCL buffer to allocate 
-to each thread.  This value should be based on the amount of available memory 
-on your GPU.  This setting is affected by lookup-gap as well, utilizing the 
-following formula for lookup-gaps of 1,2 & 4
+--buffer-size XXXX (-B XXXX):
+This setting sets the size of the OpenCL buffer to allocate to each thread.  
+This option overrides --thread-concurrency, and should be used instead of it.
+This value should be based on the amount of available memory on your GPU.  
+This setting is NOT affected by lookup-gap meaning that other tuning parameters 
+that you want to test will not force you to recalculate your buffer-size.  The 
+only setting that will make you want to change this is the --gpu-threads (-g)
+setting.  As buffer-size is the amount of memory to allocate per thread, if you 
+increase the number of threads you are launching, you will want to decrease the 
+buffer-size of each thread to ensure all of the memory resides in Dedicated GPU 
+memory instead of rolling over to Dynamic.
 
-MB per thread = thread-concurrency * 128 / (1024 * lookup-gap)
+As the NFactor for a coin increases, the amount of memory that is needed to 
+perform a single calculation rises.  The more memory that can be allocated per
+thread, the better the performance that typically can be achieved.
 
-A good example of this: lookup-gap of 2, thread-concurrency of 8192 = 512 MB
-
-As the NFactor for YACoin increases, the more memory that can be allocated per
-thread, the better performance you typically can achieve.
 SUMMARY: adjust this value first - Run GPUz to monitor the amount of dedicated
-memory used on the card until it moves into the dynamic column, then reduce it
-back down.  YACMiner will tell you at the start how much memory has been
-allocated per thread
+    memory used on the card until it moves into the dynamic column, then reduce 
+    it back down.  YACMiner will tell you at the start how much memory has been
+    allocated per thread
 
---lookup-gap:
+--lookup-gap X:
 This tunes a compromise between ram usage and performance. Performance peaks
 at a gap of 2, but increasing the gap may allow you to run at a higher rate
 as more shaders in the card get utilized.  Setting lookup gap overrides the 
-default of 2.
-SUMMARY: Start at 2, and try 4 and 8, adjusting thread-concurrency to
-maximize the amount of memory allocated
+default of 4.
+SUMMARY: Start at 2, and try 4 through 8.  Adjust your intensity setting 
+    (-R/-X/-I) to higher values as the lookup-gap increases.
 
---worksize XX (-w XX):
+--worksize XXX (-w 256):
 Has a minor effect, should be a multiple of 32 up to 256 maximum.  This sets
-the smallest size of work being sent to the GPU, and affects the values allowed
-in Raw Intensity.  
+the smallest size of work being sent to the GPU, and on 5XXX series cards 
+affects the values allowed in Raw Intensity.
 SUMMARY: Higher values are better for cards with higher shader counts and 7XXX
     series cards and newer.  Lower values for older cards give finer ranges of
     Raw Intensity to maximize performance.
@@ -119,19 +134,34 @@ Memory	# of shaders	LG	Raw Intensity
 Adjust Raw Intensity up and/or down until you no longer receive HW errors in the GUI.
 
 Optional parameters to tune:
--g:
-Some cards with large amounts of memory will need to run multiple CPU threads
-so that all of the GPU memory can be allocated.  This defaults to 1, however
-values of 1, 2, 3 & 4 can all produce similar or better results.
+--gpu-threads X (-g X):
+Some cards with large amounts of memory and low amounts of system memory will 
+need to run multiple CPU threads so that all of the GPU memory can be 
+allocated.  This is because the OpenCL buffer is built in system memory and 
+passed to the GPU.  This defaults to 1, however values of 1, 2, 3 & 4 can all 
+produce similar or better results.
 SUMMARY: Run 1 unless your card has more than 2GB of memory and you cannot
 allocate all of the memory with just 1 thread.
 
---buffer-size:
-Specify the amount of memory to allocate per thread in MB.  For now, still set
-thread-concurrency and lookup-gap, but this parameter can allocate slightly 
-more memory.  This will become the driving parameter in later version of YACMiner.
-
 Other available parameters that have better alternatives:
+--thread-concurrency XXXXX:
+This option has been depreciated.  It is still available for those people who
+like to do math on really high numbers that have to change when any other
+parameter needs to change.  I strongly recommend utilizing the --buffer-size 
+option instead.  This setting adjusts the size of the OpenCL buffer to allocate 
+to each thread.  This value should be based on the amount of available memory 
+on your GPU.  This setting is affected by lookup-gap as well, utilizing the 
+following formula for lookup-gaps of 1,2 & 4
+
+MB per thread = thread-concurrency * 128 / (1024 * lookup-gap)
+
+A good example of this: lookup-gap of 2, thread-concurrency of 8192 = 512 MB
+
+As the NFactor for a coin increases, the amount of memory that is needed to 
+perform a single calculation rises.  The more memory that can be allocated per
+thread, the better the performance that typically can be achieved.
+SUMMARY: Use --buffer-size instead
+
 --intensity XX (-I XX)
 Just like in bitcoin mining, scrypt mining takes an intensity, however the
 scale goes from 0 to 20 to mimic the "Aggression" used in mtrlt's reaper. The
@@ -147,7 +177,7 @@ sizes will allow a lower intensity.
 SUMMARY: Setting this for reasonable hashrates is mandatory.  This setting is
     not recommended for coins with a high NFactor - use --raw-intensity
 
---xintensity XX (-X xx)
+--xintensity XX (-X XX)
 All of this is credited to ArGee of RGMiner, he did the initial ground work for 
 this setting.
 
@@ -165,7 +195,7 @@ pointless trying to mine on. If this is not set, YACMiner will query the
 device for how much memory it supports and will try to set a value based on
 that.
 SUMMARY: This is carried over from low N scrypt mining .  You really want to 
-    be setting thread-concurrency, lookup-gap and raw-intensity instead.
+    be setting buffer-size, lookup-gap and raw-intensity instead.
 
 --vectors XX (-v XX)
 Vectors are NOT used by the scrypt mining kernel.
@@ -173,7 +203,7 @@ SUMMARY: Does nothing.
 
 Mining Other Scrypt-Chacha Coins: (version 3.4.2 and higher)
 The following paramters are included to allow the user to specify parameters needed
-to mine other SC based coins, such as YBCoin, Lottery Tickets, and Microcoin.
+to mine other SC based coins, such as YBCoin, Ultracoin, and Microcoin.
 Each of these parameters are tied to a specific pool, so for every pool specified by
 the -o parameter, you will need to specify each of the following or that pool will
 default to the values used for YACoin.
@@ -234,6 +264,7 @@ so don't expect to get exactly the same results!
 
 If you wish to donate to the author, please submit your donations to:
 
-	Thirtybird
-	Y4FKiwKKYGQzcqn3M3u6mJoded6ri1UWHa
+Thirtybird
+BTC: 183eSsaxG9y6m2ZhrDhHueoKnZWmbm6jfC
+YAC: Y4FKiwKKYGQzcqn3M3u6mJoded6ri1UWHa
 
