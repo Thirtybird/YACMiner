@@ -1,3 +1,25 @@
+Version 3.5.0-yac2 - 13th March 2014
+*** MAJOR CHANGES AHEAD ***
+- Application can now mine scrypt, N-Scrypt, and scrypt-chacha based coins
+- The command-line options for setting the algorithm have changed!
+   --scrypt - Mine scrypt based coins
+   --scrypt-chacha (this is the equivilant of what --scrypt used to do!)
+   --nscrypt - Mine N-Scrypt based coins (vertcoin)
+- Scrypt and N-Scrypt have different kernels.  You can use the N-Scrypt
+ kernel for mining Scrypt if you like by passing "--kernel nscrypt" on
+ the command line.  The converse does not work though.
+- buffer-size is now fully completed, and thread concurrency is no longer
+ needed.  thread-concurrency is still a valid option if you want to use it.
+- Implemented new defaults if you do not provide a buffer-size or 
+ thread-concurrency.  It will attempt to allocate 88% of the GPU memory.
+- lookup-gap now defaults to 4 if it is not set.
+- W/U is back on the hashmeter at the top of the curses display
+- Rejected count is now the number of rejected shares instead of the value
+ of the sum of all the rejected shares
+- Fixed OpenCL 1.2+ patch regarding BFI_INT patch still being done.
+- cleanup code and extraneous files in project.
+- More updates to the readme.md and scrypt-readme for further documentation.
+
 Version 3.4.2-yac2 - 19th February 2014
 
 - Implementation of --nfmin, --nfmax, and --starttime to allow 
