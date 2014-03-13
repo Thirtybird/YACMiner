@@ -1132,6 +1132,11 @@ static struct opt_table opt_config_table[] = {
 			opt_set_bool, &opt_bfl_noncerange,
 			"Use nonce range on bitforce devices if supported"),
 #endif
+#ifdef USE_SCRYPT
+	OPT_WITH_ARG("--buffer-size|-B",
+		     set_buffer_size, NULL, NULL,
+		     "Set OpenCL Buffer size in MB for scrypt mining, comma separated"),
+#endif
 #ifdef HAVE_CURSES
 	OPT_WITHOUT_ARG("--compact",
 			opt_set_bool, &opt_compact,
@@ -1281,10 +1286,10 @@ static struct opt_table opt_config_table[] = {
 #ifdef USE_SCRYPT
 	OPT_WITH_ARG("--nfmin",
 			set_nfmin, NULL, NULL,
-			"Set min N factor for mining scrypt-chacha coins (" MIN_NFACTOR_STR " to " MAX_NFACTOR_STR ")"),
+			"Set min N factor for mining scrypt-chacha and N-Scrypt coins (" MIN_NFACTOR_STR " to " MAX_NFACTOR_STR ")"),
 	OPT_WITH_ARG("--nfmax",
 			set_nfmax, NULL, NULL,
-			"Set max N factor for mining scrypt-chacha coins (" MIN_NFACTOR_STR " to " MAX_NFACTOR_STR ")"),
+			"Set max N factor for mining scrypt-chacha and N-Scrypt coins (" MIN_NFACTOR_STR " to " MAX_NFACTOR_STR ")"),
 #endif
 	OPT_WITHOUT_ARG("--no-adl",
 			opt_set_bool, &opt_noadl,
@@ -1383,7 +1388,7 @@ static struct opt_table opt_config_table[] = {
 #ifdef USE_SCRYPT
 	OPT_WITH_ARG("--starttime",
 			set_starttime, NULL, NULL,
-			"Set nStartTime for mining scrypt-jane"),
+			"Set nStartTime for mining scrypt-jane and N-Scrypt coins"),
 #endif
 #ifdef HAVE_SYSLOG_H
 	OPT_WITHOUT_ARG("--syslog",
@@ -1418,9 +1423,6 @@ static struct opt_table opt_config_table[] = {
 	OPT_WITH_ARG("--thread-concurrency",
 		     set_thread_concurrency, NULL, NULL,
 		     "Set GPU thread concurrency for scrypt mining, comma separated"),
-	OPT_WITH_ARG("--buffer-size",
-		     set_buffer_size, NULL, NULL,
-		     "Set OpenCL Buffer size in MB for scrypt mining, comma separated"),
 #endif
 	OPT_WITH_ARG("--url|-o",
 		     set_url, NULL, NULL,
