@@ -671,12 +671,6 @@ const uint4 midstate0, const uint4 midstate16, const uint target, const uint N)
 	uint Nfactor = 0;
 	uint tmp = N >> 1;
 	
-	/* Shortcut if Nfactor is at least 9 which it currently is */
-	if ((tmp & 512 - 1) == 0) {
-		Nfactor += 9;
-		tmp >>= 9;
-	}
-	
 	/* Determine the Nfactor */
 	while ((tmp & 1) == 0) {
 		tmp >>= 1;
