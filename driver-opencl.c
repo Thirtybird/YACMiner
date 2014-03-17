@@ -664,6 +664,7 @@ char *set_xintensity(char *arg)
   if (nextptr == NULL)
     return "Invalid parameters for shader based intensity";
   val = atoi(nextptr);
+  if (val == 0) return "disabled";
   if (val < MIN_XINTENSITY || val > MAX_XINTENSITY)
     return "Invalid value passed to set shader intensity";
 
@@ -703,6 +704,7 @@ char *set_rawintensity(char *arg)
   if (nextptr == NULL)
     return "Invalid parameters for raw intensity";
   val = atoi(nextptr);
+  if (val == 0) return "disabled";
   if (val < MIN_RAWINTENSITY || val > MAX_RAWINTENSITY)
     return "Invalid value passed to set raw intensity";
 
@@ -729,6 +731,9 @@ char *set_rawintensity(char *arg)
       gpus[i].rawintensity = gpus[0].rawintensity;
       gpus[i].xintensity = gpus[0].xintensity;
     }
+
+  return NULL;
+
 }
 
 void print_ndevs(int *ndevs)
