@@ -1003,6 +1003,7 @@ extern bool opt_n_scrypt;
 #else
 #define opt_scrypt (0)
 #define opt_scrypt_chacha (0)
+#define opt_n_scrypt (0)
 #endif
 extern double total_secs;
 extern int mining_threads;
