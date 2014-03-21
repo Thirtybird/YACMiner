@@ -246,7 +246,7 @@ int total_pools, enabled_pools;
 enum pool_strategy pool_strategy = POOL_FAILOVER;
 int opt_rotate_period;
 static int total_urls, total_users, total_passes, total_userpasses;
-static int total_nfmin, total_nfmax, total_starttime, total_coin;
+static int total_nfmin, total_nfmax, total_starttime, total_coin, total_algorithmstrings;
 
 static
 #ifndef HAVE_CURSES
@@ -866,6 +866,24 @@ static char *set_starttime(const char *arg)
 	return NULL;
 }
 
+static char *set_algorithmstring(const char *arg)
+{
+	struct pool *pool;
+	char *algostring;
+
+	if (total_nfmin || total_nfmax || total_starttime || total_coin)
+		return "Use only nfmin/nfmax/starttime or coin, or algorithmstring, but not both";
+	total_algorithmstrings++;
+	if (total_algorithmstrings > total_pools)
+		add_pool();
+
+	pool = pools[total_algorithmstrings - 1];
+	algostring = strdup(arg);
+
+	opt_set_charp(arg, &pool->algorithm_string);
+
+	return NULL;
+}
 
 static char *enable_debug(bool *flag)
 {
@@ -1324,6 +1342,9 @@ static struct opt_table opt_config_table[] = {
 	OPT_WITHOUT_ARG("--per-device-stats",
 			opt_set_bool, &want_per_device_stats,
 			"Force verbose mode and output per-device statistics"),
+	OPT_WITH_ARG("--pool-algorithm",
+		     set_algorithmstring, NULL, NULL,
+		     "String for setting the algorithm being used for the pool"),
 	OPT_WITHOUT_ARG("--protocol-dump|-P",
 			opt_set_bool, &opt_protocol,
 			"Verbose dump of protocol-level activities"),
@@ -3664,6 +3685,109 @@ static bool pool_unusable(struct pool *pool)
 	return false;
 }
 
+/* will reconfigure the miner to use the algorithm set in algorithm_string for the pool passed in */
+void set_algorithm_by_pool (struct pool *pool)
+{
+	if (!pool->algorithm_string)
+		return;
+
+	char *algo_name;
+	char *algo_string;
+	
+	algo_string = malloc(sizeof(pool->algorithm_string)+1);
+	strcpy(algo_string,pool->algorithm_string);
+
+	applog(LOG_DEBUG,"set_algorithm_by_pool setting up for %s",algo_string);
+
+	algo_name = strtok(algo_string,":");
+	if (strcmp(algo_name,"scrypt") == 0)
+		{
+			// No parameters
+			opt_scrypt = true;
+			opt_n_scrypt = false;
+			opt_scrypt_chacha = false;
+			applog(LOG_NOTICE,"Algorithm set to %s.",algo_name);
+		}
+	else if ((strcmp (algo_name, "nscrypt") == 0) || (strcmp (algo_name, "scrypt-chacha") == 0))
+		{
+			opt_scrypt = true;
+			if (strcmp (algo_name, "scrypt-chacha") == 0)
+				{
+					opt_scrypt_chacha = true;
+					opt_n_scrypt = false;
+				} else {
+					opt_n_scrypt = true;
+					opt_scrypt_chacha = false;
+				}
+			char *nfmin;
+			char *nfmax;
+			char *starttime;
+
+			int l_nfmin;
+			int l_nfmax;
+			long l_starttime;
+
+			char *err;
+
+			nfmin = strtok(NULL,":");
+			if (!nfmin)
+			{
+				applog(LOG_ERR,"Too Few parameters for %s algorithm, requires 3",algo_name);
+				return;
+			}
+
+			nfmax = strtok(NULL,":");
+			if (!nfmax)
+			{
+				applog(LOG_ERR,"Too Few parameters for %s algorithm, requires 3",algo_name);
+				return;
+			}
+
+			starttime = strtok(NULL,":");
+			if (!starttime)
+			{
+				applog(LOG_ERR,"Too Few parameters for %s algorithm, requires 3",algo_name);
+				return;
+			}
+
+			err = set_int_range(nfmin, &l_nfmin, MIN_NFACTOR, MAX_NFACTOR);
+			if (err)
+				return;
+			if (!pool->sc_minn)
+				pool->sc_minn = (int *)malloc(sizeof(int));
+			*pool->sc_minn = l_nfmin;
+//			applog(LOG_NOTICE,"NFMin: %d",*pool->sc_minn);
+
+			err = set_int_range(nfmax, &l_nfmax, MIN_NFACTOR, MAX_NFACTOR);
+			if (err)
+				return;
+			if (!pool->sc_maxn)
+				pool->sc_maxn = (int *)malloc(sizeof(int));
+			*pool->sc_maxn = l_nfmax;
+//			applog(LOG_NOTICE,"NFMax: %d",*pool->sc_maxn);
+
+			err = set_time_range(starttime, &l_starttime, 1, MAX_STARTTIME);
+			if (err)
+				return;
+			if (!pool->sc_starttime)
+				pool->sc_starttime  = (long *)malloc(sizeof(long));
+			*pool->sc_starttime = l_starttime;
+//			applog(LOG_NOTICE,"Starttime: %ld",*pool->sc_starttime);
+
+			applog(LOG_NOTICE,"Algorithm set to %s.  NFMin=%d  NFMax=%d  Starttime=%ld",algo_name,l_nfmin,l_nfmax,l_starttime);
+
+		}
+	else if (strcmp (algo_name, "coin") == 0)
+		{
+			// take 1 parameter, and then find the rest from the coin functions (that don't exist yet)
+		}
+	else
+	{
+		applog(LOG_ERR,"Trying to set pool algorithm - invalid algorithm name: %s",algo_name);
+	}
+
+}
+
 void switch_pools(struct pool *selected)
 {
 	struct pool *pool, *last_pool;
@@ -3724,6 +3848,10 @@ void switch_pools(struct pool *selected)
 
 	currentpool = pools[pool_no];
 	pool = currentpool;
+
+	set_algorithm_by_pool (pool);
+
+
 	cg_wunlock(&control_lock);
 
 	/* Set the lagging flag to avoid pool not providing work fast enough
@@ -4214,6 +4342,8 @@ void write_config(FILE *fcfg)
 			fprintf(fcfg, "\n\t\t\"nfmax\" : \"%d\",", *pools[i]->sc_maxn);
 		if (pools[i]->sc_starttime)
 			fprintf(fcfg, "\n\t\t\"starttime\" : \"%ld\",", *pools[i]->sc_starttime);
+		if (pools[i]->algorithm_string)
+			fprintf(fcfg, "\n\t\t\"pool-algorithm\" : \"%s\",", json_escape(pools[i]->algorithm_string));
 		fprintf(fcfg, "\n\t\t\"user\" : \"%s\",", json_escape(pools[i]->rpc_user));
 		fprintf(fcfg, "\n\t\t\"pass\" : \"%s\"\n\t}", json_escape(pools[i]->rpc_pass));
 		}
@@ -4529,6 +4659,8 @@ updated:
 			pool->idle? "Dead" : "Alive",
 			pool->prio,
 			pool->rpc_url, pool->rpc_user);
+		if (pool->algorithm_string) 
+			wlogprint("  algorithm: %s",pool->algorithm_string);
 		wattroff(logwin, A_BOLD | A_DIM);
 	}
 retry:
@@ -7084,6 +7216,7 @@ static void *test_pool_thread(void *arg)
 		cg_wlock(&control_lock);
 		if (!pools_active) {
 			currentpool = pool;
+			set_algorithm_by_pool (pool);
 			if (pool->pool_no != 0)
 				first_pool = true;
 			pools_active = true;
@@ -8005,6 +8138,7 @@ int main(int argc, char *argv[])
 	}
 	/* Set the currentpool to pool 0 */
 	currentpool = pools[0];
+	set_algorithm_by_pool (pools[0]);
 
 #ifdef HAVE_SYSLOG_H
 	if (use_syslog)

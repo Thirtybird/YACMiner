@@ -248,6 +248,12 @@ enum pool_strategy {
 	POOL_BALANCE,
 };
 
+enum algorithms {
+	ALGO_SCRYPT,
+	ALGO_N_SCRYPT,
+	ALGO_SCRYPT_CHACHA,
+};
+
 #define TOP_STRATEGY (POOL_BALANCE)
 
 struct strategies {
@@ -1144,6 +1150,9 @@ struct pool {
 	char *rpc_user, *rpc_pass;
 	curl_proxytype rpc_proxytype;
 	char *rpc_proxy;
+
+	/* mining parameters */
+	char *algorithm_string;
 	int *sc_minn;
 	int *sc_maxn;
 	long *sc_starttime;
