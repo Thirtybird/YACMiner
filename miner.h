@@ -942,6 +942,8 @@ extern int restart_wait(unsigned int mstime);
 extern void kill_work(void);
 
 extern void reinit_device(struct cgpu_info *cgpu);
+extern struct cgpu_info *get_thr_cgpu(int thr_id);
+
 
 #ifdef HAVE_ADL
 extern bool gpu_stats(int gpu, float *temp, int *engineclock, int *memclock, float *vddc, int *activity, int *fanspeed, int *fanpercent, int *powertune);

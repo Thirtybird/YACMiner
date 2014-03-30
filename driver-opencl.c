@@ -1349,7 +1349,14 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 
 	// If using the Scrypt-Chacha kernel, pass in N
 	if (clState->chosen_kernel == KL_SCRYPT_CHACHA)
+	{
 		CL_SET_ARG(N);
+
+		int thr_id = blk->work->thr_id;
+		struct cgpu_info *cgpu = get_thr_cgpu(thr_id);
+		uint LG = cgpu->opt_lg;
+		CL_SET_ARG(LG);
+	}
 
 	// If using the N Scrypt kernel, pass in NFactor
 	if (clState->chosen_kernel == KL_N_SCRYPT)

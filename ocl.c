@@ -394,6 +394,8 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 	 * name + kernelname +/- g(offset) + v + vectors + w + work_size + l + sizeof(long) + .bin
 	 * For scrypt the filename is:
 	 * name + kernelname + g + lg + lookup_gap + tc + thread_concurrency + w + work_size + l + sizeof(long) + .bin
+	 * For scrypt-chacha the filename is:
+	 * name + kernelname + g + bs + buffer_size + w + work_size + l + sizeof(long) + .bin
 	 */
 	char binaryfilename[255];
 	char filename[255];
@@ -541,8 +543,13 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 			cgpu->buffer_size = base_alloc / 1024 / 1024;
 			applog(LOG_DEBUG,"88%% Max Allocation: %u",base_alloc);
 			applog(LOG_NOTICE, "GPU %d: selecting buffer_size of %zu", gpu, cgpu->buffer_size);
-		} else
+		}
+		
+		if (cgpu->opt_tc)
+		{
 			cgpu->thread_concurrency = cgpu->opt_tc;
+			cgpu->buffer_size = (cgpu->thread_concurrency * 128 * ipt) / 1024 / 1024;
+		}
 
 		if (cgpu->buffer_size) {
 			// use the buffer-size to overwrite the thread-concurrency
@@ -580,10 +587,13 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 	if (clState->goffset)
 		strcat(binaryfilename, "g");
 	if (opt_scrypt) {
-#ifdef USE_SCRYPT
-		sprintf(numbuf, "lg%utc%u", cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency);
-		strcat(binaryfilename, numbuf);
-#endif
+		if (opt_scrypt_chacha) {
+			sprintf(numbuf, "bs%u", (unsigned int)cgpu->buffer_size);
+			strcat(binaryfilename, numbuf);
+		} else {
+			sprintf(numbuf, "lg%utc%u", cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency);
+			strcat(binaryfilename, numbuf);
+		}
 	} else {
 		sprintf(numbuf, "v%d", clState->vwidth);
 		strcat(binaryfilename, numbuf);
@@ -651,14 +661,18 @@ build:
 	/* create a cl program executable for all the devices specified */
 	char *CompilerOptions = calloc(1, 256);
 
-#ifdef USE_SCRYPT
 	if (opt_scrypt)
 	{
-		sprintf(CompilerOptions, "-D LOOKUP_GAP=%d -D CONCURRENT_THREADS=%d -D WORKSIZE=%d",
-			cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)clState->wsize);
+		if (opt_scrypt_chacha)
+		{
+			sprintf(CompilerOptions, "-D BUFFER_SIZE=%d -D WORKSIZE=%d",
+				cgpu->buffer_size, (int)clState->wsize);
+		} else {
+			sprintf(CompilerOptions, "-D LOOKUP_GAP=%d -D CONCURRENT_THREADS=%d -D WORKSIZE=%d",
+				cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)clState->wsize);
+		}
 	}
 	else
-#endif
 	{
 		sprintf(CompilerOptions, "-D WORKSIZE=%d -D VECTORS%d -D WORKVEC=%d",
 			(int)clState->wsize, clState->vwidth, (int)clState->wsize * clState->vwidth);

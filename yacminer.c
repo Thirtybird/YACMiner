@@ -425,7 +425,7 @@ struct thr_info *get_thread(int thr_id)
 	return thr;
 }
 
-static struct cgpu_info *get_thr_cgpu(int thr_id)
+struct cgpu_info *get_thr_cgpu(int thr_id)
 {
 	struct thr_info *thr = get_thread(thr_id);
 
