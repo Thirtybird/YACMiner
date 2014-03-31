@@ -540,7 +540,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 			base_alloc -= (cgpu->threads - 1) * 2 * 1024 * 1024;
 
 			cgpu->thread_concurrency = base_alloc / 128 / ipt;
-			cgpu->buffer_size = base_alloc / 1024 / 1024;
+			cgpu->buffer_size = base_alloc >> 20;
 			applog(LOG_DEBUG,"88%% Max Allocation: %u",base_alloc);
 			applog(LOG_NOTICE, "GPU %d: selecting buffer_size of %zu", gpu, cgpu->buffer_size);
 		}
@@ -548,12 +548,16 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 		if (cgpu->opt_tc)
 		{
 			cgpu->thread_concurrency = cgpu->opt_tc;
-			cgpu->buffer_size = (cgpu->thread_concurrency * 128 * ipt) / 1024 / 1024;
+			cgpu->buffer_size = (cgpu->thread_concurrency * 128 * ipt) >> 20;
+			applog(LOG_DEBUG, "GPU %d: setting buffer size to %d based on thread concurrency %d and lookup gap %d", gpu, (int)(cgpu->buffer_size),(int)(cgpu->thread_concurrency),(int)(cgpu->lookup_gap));
+			cgpu->opt_tc = 0;
 		}
 
 		if (cgpu->buffer_size) {
 			// use the buffer-size to overwrite the thread-concurrency
-			cgpu->thread_concurrency = (int)((cgpu->buffer_size * 1024 * 1024) / ipt / 128);
+			cgpu->thread_concurrency = (int)((cgpu->buffer_size << 20) / ipt / 128);
+			cgpu->opt_tc = cgpu->thread_concurrency;
+			cgpu->opt_tc = 0;
 			applog(LOG_DEBUG, "GPU %d: setting thread_concurrency to %d based on buffer size %d and lookup gap %d", gpu, (int)(cgpu->thread_concurrency),(int)(cgpu->buffer_size),(int)(cgpu->lookup_gap));
 		}
 	}
@@ -870,14 +874,9 @@ built:
 
 		unsigned int bsize = opt_n_scrypt ? 2048 : 1024;
 		size_t ipt = (bsize / cgpu->lookup_gap + (bsize % cgpu->lookup_gap > 0));
-		size_t bufsize = 128 * ipt * cgpu->thread_concurrency;
 
-		if (!cgpu->buffer_size) {
-			applog(LOG_NOTICE, "GPU %d: bufsize for thread @ %dMB based on TC of %zu", gpu, (int)(bufsize/1048576),cgpu->thread_concurrency);
-		} else {
-			applog(LOG_NOTICE, "GPU %d: bufsize for thread @ %dMB based on buffer-size", gpu, (int)(cgpu->buffer_size));
-			bufsize = (size_t)(cgpu->buffer_size)*(1048576);
-		}
+		applog(LOG_NOTICE, "GPU %d: bufsize for thread @ %dMB", gpu, (int)(cgpu->buffer_size));
+		size_t bufsize = (size_t)(cgpu->buffer_size) << 20;
 
 		/* Use the max alloc value which has been rounded to a power of
 		 * 2 greater >= required amount earlier */

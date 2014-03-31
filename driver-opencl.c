@@ -806,10 +806,13 @@ retry:
 			mhash_base = false;
 		}
 
-		wlog("GPU %d: %.1f / %.1f %sh/s | A:%d  R:%d  HW:%d  U:%.2f/m  I:%d xI:%d  rI:%d\n",
+		wlog("GPU %d: %.1f / %.1f %sh/s | A:%d  R:%d  HW:%d  U:%.2f/m\n",
 			gpu, displayed_rolling, displayed_total, mhash_base ? "M" : "K",
 			cgpu->accepted, cgpu->rejected, cgpu->hw_errors,
-			cgpu->utility, cgpu->intensity, cgpu->xintensity, cgpu->rawintensity);
+			cgpu->utility);
+		wlog("G:%d  BS:%dMB  LG:%d  |  I:%d xI:%d  rI:%d\n",
+			cgpu->threads, cgpu->buffer_size, cgpu->opt_lg,
+			cgpu->intensity, cgpu->xintensity, cgpu->rawintensity);
 #ifdef HAVE_ADL
 		if (gpus[gpu].has_adl) {
 			int engineclock = 0, memclock = 0, activity = 0, fanspeed = 0, fanpercent = 0, powertune = 0;
@@ -877,8 +880,8 @@ retry:
 		wlog("\n");
 	}
 
-	wlogprint("[E]nable [D]isable [I]ntensity [x]Intensity R[a]w Intensity [R]estart GPU %s\n",adl_active ? "[C]hange settings" : "");
-
+	wlogprint("[E]nable [D]isable [R]estart GPU %s\n",adl_active ? "[C]hange settings" : "");
+	wlogprint("[I]ntensity [x]Intensity R[a]w Intensity [L]ookup Gap\n");
 	wlogprint("Or press any other key to continue\n");
 	logwin_update();
 	input = getch();
@@ -1041,6 +1044,41 @@ retry:
 			goto retry;
 		}
 		change_gpusettings(selected);
+		goto retry;
+	} else if (!strncasecmp(&input, "l", 1)) {
+		int lookupgap;
+		char *intvar;
+
+		if (selected)
+			selected = curses_int("Select GPU to change lookup gap on");
+		if (selected < 0 || selected >= nDevs) {
+			wlogprint("Invalid selection\n");
+			goto retry;
+		}
+		intvar = curses_input("Set GPU lookup gap (1 -> 16)");
+		if (!intvar) {
+			wlogprint("Invalid input\n");
+			goto retry;
+		}
+		lookupgap = atoi(intvar);
+		free(intvar);
+		if (lookupgap < 1 || lookupgap > 16) {
+			wlogprint("Invalid selection\n");
+			goto retry;
+		}
+		gpus[selected].opt_lg = lookupgap;
+		wlogprint("Lookup gap on gpu %d set to %d\n", selected, lookupgap);
+
+		unsigned int bsize = opt_n_scrypt ? 2048 : 1024;
+		size_t ipt = (bsize / lookupgap + (bsize % lookupgap > 0));
+		gpus[selected].thread_concurrency = (int)((gpus[selected].buffer_size << 20) / ipt / 128);
+
+		//wlogprint("TC:%zu  TC_OPT:%zu  BS:%d  LG:%d\n",gpus[selected].thread_concurrency, gpus[selected].opt_tc,gpus[selected].buffer_size,gpus[selected].opt_lg);
+
+		// no need to do this for scrypt-chacha as the kernel takes lookup gap as a parameter as of 3.5.1
+		if (!opt_scrypt_chacha)
+			reinit_device(&gpus[selected]);
+
 		goto retry;
 	} else
 		clear_logwin();
@@ -1590,12 +1628,15 @@ static void get_opencl_statline_before(char *buf, struct cgpu_info *gpu)
 
 static void get_opencl_statline(char *buf, struct cgpu_info *gpu)
 {
+	tailsprintf(buf, " LG:%d",gpu->opt_lg);
+	if (gpu->threads > 1)
+		tailsprintf(buf, " T:%d",gpu->threads);
 	if (gpu->rawintensity > 0)
-		tailsprintf(buf, " T:%d rI:%4d", gpu->threads, gpu->rawintensity);
+		tailsprintf(buf, " rI:%4d", gpu->rawintensity);
 	else if (gpu->xintensity > 0)
-		tailsprintf(buf, " T:%d xI:%3d", gpu->threads, gpu->xintensity);
+		tailsprintf(buf, " xI:%3d", gpu->xintensity);
 	else
-		tailsprintf(buf, " T:%d I:%2d", gpu->threads, gpu->intensity);
+		tailsprintf(buf, " I:%2d", gpu->intensity);
 //	tailsprintf(buf, " I:%2d", gpu->intensity);
 }
 
