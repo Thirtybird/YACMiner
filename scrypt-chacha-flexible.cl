@@ -590,7 +590,7 @@ scrypt_ROMix(uint4 *restrict X/*[chunkWords]*/, __global uint4 *restrict lookup/
 	const uint ySIZE = (N/lookupgap+(N%lookupgap>0));
 
 	const uint ipt = (1024 / lookupgap + (1024 % lookupgap > 0));
-	uint tc = (BUFFER_SIZE * 1024 * 1024) / ipt / 128;
+	uint tc = (BUFFER_SIZE << 20) / ipt / 128;
 	const uint effective_concurrency = (tc << 9) >> Nfactor;
 
 	const uint xSIZE = effective_concurrency;
@@ -615,19 +615,16 @@ scrypt_ROMix(uint4 *restrict X/*[chunkWords]*/, __global uint4 *restrict lookup/
 		}
 	}
 
-	if ((lookupgap != 1) && (lookupgap != 2) && (lookupgap != 4) && (lookupgap != 8))
-	{
-		if (N % lookupgap > 0) {
-			y = N / lookupgap;
+	if (N % lookupgap > 0) {
+		y = N / lookupgap;
 
-			#pragma unroll
-			for (z = 0; z < zSIZE; z++) {
-				lookup[CO] = X[z];
-			}
+		#pragma unroll
+		for (z = 0; z < zSIZE; z++) {
+			lookup[CO] = X[z];
+		}
 
-			for (j = 0; j < N % lookupgap; j++) {
-				scrypt_ChunkMix_inplace_local(X);
-			}
+		for (j = 0; j < N % lookupgap; j++) {
+			scrypt_ChunkMix_inplace_local(X);
 		}
 	}
 
@@ -642,15 +639,12 @@ scrypt_ROMix(uint4 *restrict X/*[chunkWords]*/, __global uint4 *restrict lookup/
 			W[z] = lookup[CO];
 		}
 
-		if (lookupgap == 1)
-		{
-		}
-		else if (lookupgap == 2)
+		if (lookupgap == 2)
 		{
 			if (j & 1) {
 				scrypt_ChunkMix_inplace_local(W);
 			}
-		} else {
+		} else if (lookupgap != 1) {
 			uint c = j % lookupgap;
 			for (uint k = 0; k < c; k++) {
 				scrypt_ChunkMix_inplace_local(W);
