@@ -2,7 +2,7 @@
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_maj], [3])
 m4_define([v_min], [5])
-m4_define([v_mic], [0])
+m4_define([v_mic], [1])
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_ver], [v_maj.v_min.v_mic]-yac2)
 m4_define([lt_rev], m4_eval(v_maj + v_min))
@@ -409,7 +409,7 @@ AC_DEFINE_UNQUOTED([DIAKGCN_KERNNAME], ["diakgcn121016"], [Filename for diakgcn 
 AC_DEFINE_UNQUOTED([DIABLO_KERNNAME], ["diablo130302"], [Filename for diablo kernel])
 AC_DEFINE_UNQUOTED([SCRYPT_KERNNAME], ["scrypt130511"], [Filename for scrypt kernel])
 AC_DEFINE_UNQUOTED([N_SCRYPT_KERNNAME], ["scrypt140202"], [Filename for scrypt kernel])
-AC_DEFINE_UNQUOTED([SCRYPT_CHACHA_KERNNAME], ["scrypt-chacha"], [Filename for scrypt-chacha kernel])
+AC_DEFINE_UNQUOTED([SCRYPT_CHACHA_KERNNAME], ["scrypt-chacha-flexible"], [Filename for scrypt-chacha kernel])
 
 
 AC_SUBST(OPENCL_LIBS)
