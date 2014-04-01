@@ -1331,6 +1331,11 @@ static bool parse_reconnect(struct pool *pool, json_t *val)
 {
 	char *url, *port, address[256];
 
+	if (opt_disable_client_reconnect) {
+		applog(LOG_WARNING, "Stratum client.reconnect forbidden, aborting.");
+		return false;
+	}
+
 	memset(address, 0, 255);
 	url = (char *)json_string_value(json_array_get(val, 0));
 	if (!url)
