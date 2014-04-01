@@ -83,6 +83,7 @@ esac
 case $target in
   *-*-mingw*)
     have_win32=true
+    CFLAGS="$CFLAGS -Wformat=1"
     PTHREAD_FLAGS=""
     DLOPEN_FLAGS=""
     WS2_LIBS="-lws2_32"
