@@ -544,7 +544,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 			cgpu->thread_concurrency = base_alloc / 128 / ipt;
 			cgpu->buffer_size = base_alloc >> 20;
 			applog(LOG_DEBUG,"88%% Max Allocation: %u",base_alloc);
-			applog(LOG_NOTICE, "GPU %d: selecting buffer_size of %zu", gpu, cgpu->buffer_size);
+			applog(LOG_NOTICE, "GPU %d: selecting buffer_size of %lu", gpu, (long unsigned int)(cgpu->buffer_size));
 		}
 		
 		if (cgpu->opt_tc)
@@ -671,8 +671,8 @@ build:
 	{
 		if (opt_scrypt_chacha)
 		{
-			sprintf(CompilerOptions, "-D BUFFER_SIZE=%d -D WORKSIZE=%d",
-				cgpu->buffer_size, (int)clState->wsize);
+			sprintf(CompilerOptions, "-D BUFFER_SIZE=%lu -D WORKSIZE=%d",
+				(long unsigned int)(cgpu->buffer_size), (int)clState->wsize);
 		} else {
 			sprintf(CompilerOptions, "-D LOOKUP_GAP=%d -D CONCURRENT_THREADS=%d -D WORKSIZE=%d",
 				cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)clState->wsize);

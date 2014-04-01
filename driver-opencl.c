@@ -810,8 +810,9 @@ retry:
 			gpu, displayed_rolling, displayed_total, mhash_base ? "M" : "K",
 			cgpu->accepted, cgpu->rejected, cgpu->hw_errors,
 			cgpu->utility);
-		wlog("G:%d  BS:%dMB  LG:%d  |  MA:%dMB  CS:%zu  |  I:%d xI:%d  rI:%d\n",
-			cgpu->threads, cgpu->buffer_size, cgpu->opt_lg, (int)(cgpu->max_alloc >> 20), cgpu->compute_shaders,
+		wlog("G:%d  BS:%luMB  LG:%d  |  MA:%luMB  CS:%lu  |  I:%d xI:%d  rI:%d\n",
+			cgpu->threads, (long unsigned int)cgpu->buffer_size, cgpu->opt_lg, 
+			(long unsigned int)(cgpu->max_alloc >> 20), (long unsigned int)(cgpu->compute_shaders),
 			cgpu->intensity, cgpu->xintensity, cgpu->rawintensity);
 #ifdef HAVE_ADL
 		if (gpus[gpu].has_adl) {
@@ -1073,7 +1074,8 @@ retry:
 		size_t ipt = (bsize / lookupgap + (bsize % lookupgap > 0));
 		gpus[selected].thread_concurrency = (int)((gpus[selected].buffer_size << 20) / ipt / 128);
 
-		//wlogprint("TC:%zu  TC_OPT:%zu  BS:%d  LG:%d\n",gpus[selected].thread_concurrency, gpus[selected].opt_tc,gpus[selected].buffer_size,gpus[selected].opt_lg);
+		//wlogprint("TC:%lu  TC_OPT:%lu  BS:%d  LG:%d\n",(long unsigned int)(gpus[selected].thread_concurrency), 
+		//(long unsigned int)(gpus[selected].opt_tc),gpus[selected].buffer_size,gpus[selected].opt_lg);
 
 		// no need to do this for scrypt-chacha as the kernel takes lookup gap as a parameter as of 3.5.1
 		if (!opt_scrypt_chacha)
