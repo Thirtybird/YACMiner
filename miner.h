@@ -506,6 +506,7 @@ struct cgpu_info {
 	size_t work_size;
 	enum cl_kernels kernel;
 	cl_ulong max_alloc;
+	size_t compute_shaders;
 
 #ifdef USE_SCRYPT
 	int opt_lg, lookup_gap;

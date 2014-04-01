@@ -379,6 +379,8 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 	// AMD architechture got 64 compute shaders per compute unit.
 	// Source: http://www.amd.com/us/Documents/GCN_Architecture_whitepaper.pdf
 	clState->compute_shaders = compute_units * 64;
+	cgpu->compute_shaders = compute_units * 64;
+
 	applog(LOG_DEBUG, "Max shaders calculated %d", (int)(clState->compute_shaders));
 
 	status = clGetDeviceInfo(devices[gpu], CL_DEVICE_MAX_MEM_ALLOC_SIZE , sizeof(cl_ulong), (void *)&cgpu->max_alloc, NULL);

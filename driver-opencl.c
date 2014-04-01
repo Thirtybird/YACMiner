@@ -810,8 +810,8 @@ retry:
 			gpu, displayed_rolling, displayed_total, mhash_base ? "M" : "K",
 			cgpu->accepted, cgpu->rejected, cgpu->hw_errors,
 			cgpu->utility);
-		wlog("G:%d  BS:%dMB  LG:%d  |  I:%d xI:%d  rI:%d\n",
-			cgpu->threads, cgpu->buffer_size, cgpu->opt_lg,
+		wlog("G:%d  BS:%dMB  LG:%d  |  MA:%dMB  CS:%zu  |  I:%d xI:%d  rI:%d\n",
+			cgpu->threads, cgpu->buffer_size, cgpu->opt_lg, (int)(cgpu->max_alloc >> 20), cgpu->compute_shaders,
 			cgpu->intensity, cgpu->xintensity, cgpu->rawintensity);
 #ifdef HAVE_ADL
 		if (gpus[gpu].has_adl) {
