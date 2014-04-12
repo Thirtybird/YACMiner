@@ -810,7 +810,7 @@ retry:
 			gpu, displayed_rolling, displayed_total, mhash_base ? "M" : "K",
 			cgpu->accepted, cgpu->rejected, cgpu->hw_errors,
 			cgpu->utility);
-		wlog("G:%d  BS:%luMB  LG:%d  |  MA:%luMB  CS:%lu  |  I:%d xI:%d  rI:%d\n",
+		wlog("T:%d  BS:%luMB  LG:%d  |  MA:%luMB  CS:%lu  |  I:%d xI:%d  rI:%d\n",
 			cgpu->threads, (long unsigned int)cgpu->buffer_size, cgpu->opt_lg, 
 			(long unsigned int)(cgpu->max_alloc >> 20), (long unsigned int)(cgpu->compute_shaders),
 			cgpu->intensity, cgpu->xintensity, cgpu->rawintensity);

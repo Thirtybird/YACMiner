@@ -144,6 +144,7 @@ Options for both config file and command line:
 	--net-delay         Impose small delays in networking to not overload slow routers
 	--nfmin <arg>       Set min N factor for mining scrypt-chacha coins (4 to 40)
 	--nfmax <arg>       Set max N factor for mining scrypt-chacha coins (4 to 40)
+	--no-client-reconnect Disable 'client.reconnect' stratum functionality
 	--no-submit-stale   Don't submit shares if they are detected as stale
 	--nscrypt           Use the adaptive N-Factor scrypt algorithm for mining
 	--pass|-p <arg>     Password for bitcoin JSON-RPC server
@@ -250,22 +251,37 @@ The following options are available while running with a single keypress:
 
 
 #### [G]PU management
-gives you something like: (may be out of date or not relevent to YACoin)
+gives you something like:
 
-	GPU 0: [124.2 / 191.3 Mh/s] [A:77  R:33  HW:0  U:1.73/m  WU 1.73/m]
-	Temp: 67.0 C
-	Fan Speed: 35% (2500 RPM)
-	Engine Clock: 960 MHz
-	Memory Clock: 480 Mhz
-	Vddc: 1.200 V
-	Activity: 93%
-	Powertune: 0%
-	Last initialised: [2011-09-06 12:03:56]
-	Thread 0: 62.4 Mh/s Enabled ALIVE
-	Thread 1: 60.2 Mh/s Enabled ALIVE
+	GPU 0: 1.4 / 1.5 Kh/s A:77  R:0  HW:0  U:1.33/m
+	T:1  BS:710MB  LG:8  |  MA:767MB  CS:640  | I:0  xI:0  rI:1280
+	67.0 C  E: 900 Mhz  M: 1100 Mhz  V: 1,000V  A: 99% P: 0%
+	Last initialised: [2014-04-06 12:03:56]
+	Thread 0: 1.4 Kh/s Enabled ALIVE
 
 	[E]nable [D]isable [R]estart GPU [C]hange settings
+	[I]ntensity [x]Intensity R[a]w Intensity [L]ookup Gap
 	Or press any other key to continue
+
+The columns are defined in the following way:
+	A:   The number of Accepted shares
+	R:   The number of Rejected shares
+	HW:  The number of HardWare errors
+	U:   The Utility defined as the number of shares / minute
+	T:   The number of cpu threads running on this GPU (defined by -g)
+	BS:  The size of the OpenCL Buffer
+	LG:  The Lookup-gap being used by this GPU
+	MA:  The maximum allocation the GPU is reporting.  This is very rarely
+	       the practical amount that can be allocated
+	CS:  The number of Compute Shaders the card reports as having
+	I:   The Intensity setting of the GPU - lauches 2^Intensity GPU threads
+	xI:  The Experimental Intensity setting - launches xI multiple of shader count threads
+	rI:  The Raw Intensity setting - launches rI GPU threads
+	E:   The GPU Engine clock speed
+	M:   The GPU Memory clock speed
+	V:   The GPU voltage
+	A:   The GPU Activity percentage
+	P:   The GPU Powertune setting (0-20%)
 
 The running log shows output like this:
 
@@ -320,8 +336,8 @@ this time.
 #### GPU status
 Below the summary, each GPU is shown with its corresponding stats
 
-	GPU 0:  42.0C 1061RPM | 2.090K/2.091Kh/s | A:2457 R: 0 HW:0 U:2.14/m T:1 rI: 808
-	GPU 1:  44.0C 1042RPM | 2.090K/2.091Kh/s | A:2268 R: 0 HW:0 U:1.97/m T:1 rI: 808
+	GPU 0:  42.0C 1061RPM | 2.090K/2.091Kh/s | A:2457 R: 0 HW:0 U:2.14/m LG:4 rI: 808
+	GPU 1:  44.0C 1042RPM | 2.090K/2.091Kh/s | A:2268 R: 0 HW:0 U:1.97/m LG:4 rI: 808
 
 The columns are defined in the following way:
 
@@ -333,7 +349,9 @@ The columns are defined in the following way:
 	R:   The number of rejected shares
 	HW:  The number of hardware erorrs
 	U:   The utility defined as the number of shares / minute
-	T:   The number of cpu threads running on this GPU (defined by -g)
+	LG:  The Lookup-gap being used by this GPU
+	T:   The number of cpu threads running on this GPU (defined by -g).  Only present if
+	       value is greater than 1
 	I:   The Intensity setting of the GPU - lauches 2^Intensity GPU threads
 	xI:  The Experimental Intensity setting - launches xI multiple of shader count threads
 	rI:  The Raw Intensity setting - launches rI GPU threads
