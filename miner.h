@@ -870,6 +870,8 @@ extern char *opt_api_description;
 extern int opt_api_port;
 extern bool opt_api_listen;
 extern bool opt_api_network;
+extern bool opt_autotune;
+extern bool opt_autotune_expert;
 extern bool opt_delaynet;
 extern bool opt_restart;
 extern bool opt_disable_client_reconnect;
@@ -919,6 +921,7 @@ extern int sc_minn;
 extern int sc_maxn;
 extern long sc_starttime;
 extern unsigned int sc_currentn;
+extern unsigned int sc_lastn;
 
 #ifdef USE_USBUTILS
 extern pthread_mutex_t cgusb_lock;

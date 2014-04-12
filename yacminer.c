@@ -101,6 +101,7 @@ int sc_minn=4;
 int sc_maxn=30;
 long sc_starttime=1367991200;
 unsigned int sc_currentn=4;
+unsigned int sc_lastn=0;
 
 #if defined(HAVE_OPENCL) || defined(USE_USBUTILS)
 int nDevs;
@@ -153,6 +154,8 @@ int opt_api_port = 4028;
 bool opt_api_listen;
 bool opt_api_network;
 bool opt_delaynet;
+bool opt_autotune = false;
+bool opt_autotune_expert = false;
 bool opt_disable_client_reconnect = false;
 bool opt_disable_pool;
 char *opt_icarus_options = NULL;
@@ -1122,6 +1125,12 @@ static struct opt_table opt_config_table[] = {
 			opt_set_bool, &opt_autoengine,
 			"Automatically adjust all GPU engine clock speeds to maintain a target temperature"),
 #endif
+	OPT_WITHOUT_ARG("--auto-tune",
+		     opt_set_bool, &opt_autotune,
+	         "Automatically adjust miner settings when mining N-Factor coins. R will be multiple of worksize"),
+	OPT_WITHOUT_ARG("--auto-tune-expert",
+		     opt_set_bool, &opt_autotune_expert,
+	         "Automatically adjust miner settings when mining N-Factor coins. R will not be a multiple of worksize (potential to  crash)"),
 	OPT_WITHOUT_ARG("--balance",
 		     set_balance, &pool_strategy,
 		     "Change multipool strategy from failover to even share balance"),
@@ -4412,6 +4421,10 @@ void write_config(FILE *fcfg)
 		fprintf(fcfg, ",\n\"api-description\" : \"%s\"", json_escape(opt_api_description));
 	if (opt_api_groups)
 		fprintf(fcfg, ",\n\"api-groups\" : \"%s\"", json_escape(opt_api_groups));
+	if (opt_autotune)
+		fprintf(fcfg, ",\n\"auto-tune\" : true");
+	if (opt_autotune_expert)
+		fprintf(fcfg, ",\n\"auto-tune-expert\" : true");
 	if (opt_icarus_options)
 		fprintf(fcfg, ",\n\"icarus-options\" : \"%s\"", json_escape(opt_icarus_options));
 	if (opt_icarus_timing)

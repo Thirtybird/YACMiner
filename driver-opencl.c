@@ -736,6 +736,90 @@ char *set_rawintensity(char *arg)
 
 }
 
+// function to set all gpu's to the potential best setting
+void autotune_all_gpu()
+{
+//	return;
+
+	double fMBPH;
+	int i, gpu;
+	int lMaxLG = 8;
+	int lIPT = 0;
+	unsigned long lEffectiveMemory = 0;
+	int lMaxHashes[lMaxLG+1];
+	int lrIIncrement = 1;
+
+	fMBPH = 1 << (sc_currentn - 2);
+	fMBPH = fMBPH / 1024;
+//	applog(LOG_NOTICE,"MBPH:%f",fMBPH);
+	for (gpu = 0; gpu < nDevs; gpu++) {
+		struct cgpu_info *cgpu = &gpus[gpu];
+
+		for (i=2;i<=lMaxLG;i++)
+		{ 
+			lIPT = (1024 / i) + (1024 % i);
+			lEffectiveMemory = cgpu->buffer_size  * (double)(1024 / (double)lIPT);
+			if (lEffectiveMemory / fMBPH >= cgpu->compute_shaders  * 4)
+				{
+					lMaxHashes[i] = 0; //cgpu->compute_shaders * 4;
+					break;
+				} else {
+					lrIIncrement = (opt_autotune_expert ? 1 : cgpu->work_size);
+					lMaxHashes[i] = (int)((lEffectiveMemory / fMBPH)/lrIIncrement) * lrIIncrement;
+				}
+//			applog(LOG_NOTICE,"LG:%d   IPT:%d   EM:%lu   MH:%d",i,lIPT,lEffectiveMemory,lMaxHashes[i]);
+
+		}
+		if (i>lMaxLG)
+			i = lMaxLG;
+
+		if (cgpu->compute_shaders * 4 * (89-i) / 100 < lMaxHashes[i-1])
+			i--;
+
+		cgpu->dynamic=false;
+		cgpu->intensity=0;
+		cgpu->rawintensity=0;
+		cgpu->xintensity=1;
+		pause_dynamic_threads(gpu);
+
+		if (lMaxHashes[i] == 0)
+		{
+			cgpu->dynamic=false;
+			cgpu->intensity=0;
+			cgpu->rawintensity=0;
+			cgpu->xintensity=32;
+			pause_dynamic_threads(gpu);
+			applog(LOG_NOTICE,"Auto-Tune GPU %d Setting LG to %d and xI to 32",gpu,i);
+
+		} else {
+			cgpu->dynamic=false;
+			cgpu->intensity=0;
+			cgpu->xintensity=0;
+			cgpu->rawintensity=lMaxHashes[i];
+			pause_dynamic_threads(gpu);
+			applog(LOG_NOTICE,"Auto-Tune GPU %d Setting LG to %d and rI to %d",gpu,i,lMaxHashes[i]);
+		}
+
+
+		if (cgpu->opt_lg != i)
+		{
+			unsigned int bsize = opt_n_scrypt ? 2048 : 1024;
+			size_t ipt = (bsize / i + (bsize % i > 0));
+			cgpu->thread_concurrency = (int)((cgpu->buffer_size << 20) / ipt / 128);
+			cgpu->opt_lg = i;
+		}
+
+		if ((opt_n_scrypt == true) && (i != cgpu->opt_lg))
+		{
+			// restart the GPU
+			// this is not the right way to do this and needs revisiting.  SC is unaffected due to flexible kernel
+			applog(LOG_NOTICE,"Restarting GPU %d",gpu);
+			reinit_device(&gpus[gpu]);
+		}
+
+	}
+}
+
 void print_ndevs(int *ndevs)
 {
 	opt_log_output = true;
@@ -1363,6 +1447,13 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 		//sc_currentn = GetNfactor(timestamp);
 		blk->work->pool->sc_lastnfactor = GetNfactor(timestamp, minn, maxn, starttime);
 		sc_currentn = blk->work->pool->sc_lastnfactor;
+		if (sc_currentn != sc_lastn)
+		{
+				sc_lastn = sc_currentn;
+				applog(LOG_NOTICE, "Setting N-Factor to %d",sc_currentn);
+				if ((opt_autotune) || (opt_autotune_expert))
+					autotune_all_gpu();
+		}
         nfactor = blk->work->pool->sc_lastnfactor +1;
     
 		N = (1 << nfactor);
