@@ -155,7 +155,6 @@ bool opt_api_listen;
 bool opt_api_network;
 bool opt_delaynet;
 bool opt_autotune = false;
-bool opt_autotune_expert = false;
 bool opt_disable_client_reconnect = false;
 bool opt_disable_pool;
 char *opt_icarus_options = NULL;
@@ -1125,12 +1124,12 @@ static struct opt_table opt_config_table[] = {
 			opt_set_bool, &opt_autoengine,
 			"Automatically adjust all GPU engine clock speeds to maintain a target temperature"),
 #endif
-	OPT_WITHOUT_ARG("--auto-tune",
+	OPT_WITHOUT_ARG("--autotune",
 		     opt_set_bool, &opt_autotune,
 	         "Automatically adjust miner settings when mining N-Factor coins. R will be multiple of worksize"),
-	OPT_WITHOUT_ARG("--auto-tune-expert",
-		     opt_set_bool, &opt_autotune_expert,
-	         "Automatically adjust miner settings when mining N-Factor coins. R will not be a multiple of worksize (potential to  crash)"),
+	OPT_WITH_ARG("--autotune-increment",
+		     set_autotune_increment, NULL, NULL,
+	         "Set the increment autotune will adjust rI by.  Default to worksize, range (" MIN_AUTOTUNEINCREMENT_STR "-" MAX_AUTOTUNEINCREMENT_STR ") (potential to  crash)"),
 	OPT_WITHOUT_ARG("--balance",
 		     set_balance, &pool_strategy,
 		     "Change multipool strategy from failover to even share balance"),
@@ -4255,8 +4254,13 @@ void write_config(FILE *fcfg)
 				gpus[i].vwidth);
 		fputs("\",\n\"worksize\" : \"", fcfg);
 		for(i = 0; i < nDevs; i++)
-			fprintf(fcfg, "%s%d", i > 0 ? "," : "",
-				(int)gpus[i].work_size);
+			fprintf(fcfg, "%s%d", i > 0 ? "," : "", (int)gpus[i].work_size);
+		if ((nDevs > 0) && (gpus[0].autotune_increment > 0)) {
+			fputs("\",\n\"autotune-increment\" : \"", fcfg);
+			for(i = 0; i < nDevs; i++)
+				fprintf(fcfg, "%s%d", i > 0 ? "," : "", gpus[i].autotune_increment);
+		}
+
 		fputs("\",\n\"kernel\" : \"", fcfg);
 		for(i = 0; i < nDevs; i++) {
 			fprintf(fcfg, "%s", i > 0 ? "," : "");
@@ -4422,9 +4426,7 @@ void write_config(FILE *fcfg)
 	if (opt_api_groups)
 		fprintf(fcfg, ",\n\"api-groups\" : \"%s\"", json_escape(opt_api_groups));
 	if (opt_autotune)
-		fprintf(fcfg, ",\n\"auto-tune\" : true");
-	if (opt_autotune_expert)
-		fprintf(fcfg, ",\n\"auto-tune-expert\" : true");
+		fprintf(fcfg, ",\n\"autotune\" : true");
 	if (opt_icarus_options)
 		fprintf(fcfg, ",\n\"icarus-options\" : \"%s\"", json_escape(opt_icarus_options));
 	if (opt_icarus_timing)

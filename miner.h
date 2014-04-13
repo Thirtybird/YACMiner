@@ -515,6 +515,7 @@ struct cgpu_info {
 #endif
 	struct timeval tv_gpustart;
 	int intervals;
+	int autotune_increment;
 #endif
 
 	bool new_work;
@@ -871,7 +872,6 @@ extern int opt_api_port;
 extern bool opt_api_listen;
 extern bool opt_api_network;
 extern bool opt_autotune;
-extern bool opt_autotune_expert;
 extern bool opt_delaynet;
 extern bool opt_restart;
 extern bool opt_disable_client_reconnect;
@@ -983,6 +983,11 @@ extern bool add_pool_details(struct pool *pool, bool live, char *url, char *user
 #define MIN_RAWINTENSITY_STR "1"
 #define MAX_RAWINTENSITY 2147483647
 #define MAX_RAWINTENSITY_STR "2147483647"
+
+#define MIN_AUTOTUNEINCREMENT 1
+#define MIN_AUTOTUNEINCREMENT_STR "1"
+#define MAX_AUTOTUNEINCREMENT 512
+#define MAX_AUTOTUNEINCREMENT_STR "512"
 
 #define MIN_NFACTOR 4
 #define MIN_NFACTOR_STR "4"

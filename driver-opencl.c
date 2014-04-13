@@ -736,6 +736,37 @@ char *set_rawintensity(char *arg)
 
 }
 
+char *set_autotune_increment(char *arg)
+{
+	int i, device = 0, *tt;
+	char *nextptr, val = 0;
+
+	nextptr = strtok(arg, ",");
+	if (nextptr == NULL)
+		return "Invalid parameters for set autotune increment";
+	val = atoi(nextptr);
+	if (val < MIN_AUTOTUNEINCREMENT || val > MAX_AUTOTUNEINCREMENT)
+		return "Invalid value passed to set autotune increment";
+
+	gpus[device].autotune_increment = val;
+	device++;
+
+	while ((nextptr = strtok(NULL, ",")) != NULL) {
+		val = atoi(nextptr);
+		if (val < MIN_AUTOTUNEINCREMENT || val > MAX_AUTOTUNEINCREMENT)
+			return "Invalid value passed to set autotune increment";
+		gpus[device].autotune_increment = val;
+		device++;
+	}
+	if (device == 1)
+	for (i = device; i < MAX_GPUDEVICES; i++) {
+		gpus[i].autotune_increment = gpus[0].autotune_increment;
+	}
+
+	return NULL;
+
+}
+
 // function to set all gpu's to the potential best setting
 void autotune_all_gpu()
 {
@@ -764,7 +795,10 @@ void autotune_all_gpu()
 					lMaxHashes[i] = 0; //cgpu->compute_shaders * 4;
 					break;
 				} else {
-					lrIIncrement = (opt_autotune_expert ? 1 : cgpu->work_size);
+					if (cgpu->autotune_increment == 0)
+						lrIIncrement = (int)cgpu->work_size;
+					else
+						lrIIncrement = cgpu->autotune_increment;
 					lMaxHashes[i] = (int)((lEffectiveMemory / fMBPH)/lrIIncrement) * lrIIncrement;
 				}
 //			applog(LOG_NOTICE,"LG:%d   IPT:%d   EM:%lu   MH:%d",i,lIPT,lEffectiveMemory,lMaxHashes[i]);
@@ -789,7 +823,7 @@ void autotune_all_gpu()
 			cgpu->rawintensity=0;
 			cgpu->xintensity=32;
 			pause_dynamic_threads(gpu);
-			applog(LOG_NOTICE,"Auto-Tune GPU %d Setting LG to %d and xI to 32",gpu,i);
+			applog(LOG_NOTICE,"AutoTune GPU %d Setting LG to %d and xI to 32",gpu,i);
 
 		} else {
 			cgpu->dynamic=false;
@@ -797,7 +831,7 @@ void autotune_all_gpu()
 			cgpu->xintensity=0;
 			cgpu->rawintensity=lMaxHashes[i];
 			pause_dynamic_threads(gpu);
-			applog(LOG_NOTICE,"Auto-Tune GPU %d Setting LG to %d and rI to %d",gpu,i,lMaxHashes[i]);
+			applog(LOG_NOTICE,"AutoTune GPU %d Setting LG to %d and rI to %d",gpu,i,lMaxHashes[i]);
 		}
 
 
@@ -1451,7 +1485,7 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 		{
 				sc_lastn = sc_currentn;
 				applog(LOG_NOTICE, "Setting N-Factor to %d",sc_currentn);
-				if ((opt_autotune) || (opt_autotune_expert))
+				if (opt_autotune)
 					autotune_all_gpu();
 		}
         nfactor = blk->work->pool->sc_lastnfactor +1;
